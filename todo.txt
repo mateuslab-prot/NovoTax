@@ -1,0 +1,12 @@
+Remove their examples
+
+Example files from "our" datasets
+    1. "Pure" sample
+    2. Contaminated sample, extreme one with single contaminant
+    3. One DIA
+
+Include sample.tsv example, with our example files
+
+Add experiment_name to sample.tsv
+Test if sample names are unique for each experiment name
+Test if dda has .mgf as input and dia .mzML

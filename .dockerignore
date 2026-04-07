@@ -1,0 +1,62 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+env/
+
+# Jupyter / notebooks
+.ipynb_checkpoints/
+
+# Nextflow
+.nextflow/
+work/
+results/
+*.nextflow.log*
+.trace
+.timeline.*
+.report.*
+.dag.*
+.resume*
+
+# Local data / test runs
+test_run/
+data/
+tmp/
+temp/
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Docs and repo metadata not needed in runtime image
+docs/
+README.md
+LICENSE
+
+# Large or irrelevant files
+*.mzML
+*.mgf
+*.raw
+*.fasta
+*.fa
+*.db
+*.tar
+*.tar.gz
+*.zip

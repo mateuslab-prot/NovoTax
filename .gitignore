@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+env/
+
+# Nextflow
+.nextflow/
+work/
+results/
+*.nextflow.log*
+.trace
+.timeline.*
+.report.*
+.dag.*
+.resume*
+
+# Local runs / outputs
+test_run/
+tmp/
+temp/
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Secrets / env
+.env
+.env.*
+*.local
