@@ -14,14 +14,14 @@ Channel
     .map { row ->
         def sample_name  = row.sample_name?.toString()?.trim()
         def file_path    = row.file_path?.toString()?.trim()
-        def type_of_data = row.type_of_data?.toString()?.trim()?.toLowerCase()
+        def data_format = row.data_format?.toString()?.trim()?.toLowerCase()
 
-        if( !sample_name || !file_path || !type_of_data ) {
-            error "Each row in samples.tsv must contain sample_name, file_path, and type_of_data"
+        if( !sample_name || !file_path || !data_format ) {
+            error "Each row in samples.tsv must contain sample_name, file_path, and data_format"
         }
 
-        if( !(type_of_data in ['dda', 'dia']) ) {
-            error "Unsupported type_of_data '${type_of_data}' for sample '${sample_name}'. Supported values: dda, dia"
+        if( !(data_format in ['dda', 'dia']) ) {
+            error "Unsupported data_format '${data_format}' for sample '${sample_name}'. Supported values: dda, dia"
         }
 
         def input_file = file(file_path)
@@ -29,7 +29,7 @@ Channel
             error "Input file not found for sample '${sample_name}': ${file_path}"
         }
 
-        tuple(sample_name, input_file, type_of_data)
+        tuple(sample_name, input_file, data_format)
     }
     .set { samples_ch }
 
@@ -40,14 +40,14 @@ process RUN_XUANJINOVO {
     publishDir params.outdir, mode: 'copy'
 
     input:
-    tuple val(sample_name), path(peak_file), val(type_of_data)
+    tuple val(sample_name), path(peak_file), val(data_format)
     path model_file
 
     output:
     path "${sample_name}_xuanjinovo.tsv"
 
     when:
-    type_of_data == 'dda'
+    data_format == 'dda'
 
     script:
     def peak_name  = peak_file.getName()
@@ -74,14 +74,14 @@ process RUN_CASCADIA {
     publishDir params.outdir, mode: 'copy'
 
     input:
-    tuple val(sample_name), path(input_file), val(type_of_data)
+    tuple val(sample_name), path(input_file), val(data_format)
     path cascadia_model_file
 
     output:
     path "${sample_name}_cascadia.ssl"
 
     when:
-    type_of_data == 'dia'
+    data_format == 'dia'
 
     script:
     def input_name          = input_file.getName()
