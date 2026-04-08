@@ -112,7 +112,7 @@ process RUN_NOVOTAX {
     """
     set -euo pipefail
 
-    python /app/count_lines.py \
+    python /app/novotax_ph.py \
       "${sample_name}" \
       "${result_name}" \
       "${sample_name}_linecount.txt"
@@ -132,5 +132,5 @@ workflow {
 
     all_results = xuanjinovo_results.mix(cascadia_results)
 
-    COUNT_LINES(all_results)
+    RUN_NOVOTAX(all_results)
 }
