@@ -35,11 +35,6 @@ Channel
     }
     .set { samples_ch }
 
-cascadia_model_ch = params.cascadia_model_file \
-    ? Channel.value(file(params.cascadia_model_file))
-    : Channel.empty()
-
-
 process RUN_XUANJINOVO {
     tag { sample_name }
 
@@ -74,14 +69,40 @@ process RUN_XUANJINOVO {
     """
 }
 
-process RUN_CASCADIA {
+process RUN_CASCADIA_WITH_MODEL {
     tag { sample_name }
 
     publishDir { "${params.outdir}/${sample_name}" }, mode: 'copy'
 
     input:
     tuple val(sample_name), path(input_file), val(data_format)
-    path cascadia_model_file, optional: true
+    path cascadia_model_file
+
+    output:
+    tuple val(sample_name), path("${sample_name}_cascadia.ssl"), val(data_format)
+
+    when:
+    data_format == 'dia'
+
+    script:
+    def input_name = input_file.getName()
+    def model_name = cascadia_model_file.getName()
+
+    """
+    set -euo pipefail
+    WORKDIR="\$(pwd)"
+
+    cascadia sequence "\$WORKDIR/${input_name}" "\$WORKDIR/${model_name}" -o "\$WORKDIR/${sample_name}_cascadia"
+    """
+}
+
+process RUN_CASCADIA_BUILTIN_MODEL {
+    tag { sample_name }
+
+    publishDir { "${params.outdir}/${sample_name}" }, mode: 'copy'
+
+    input:
+    tuple val(sample_name), path(input_file), val(data_format)
 
     output:
     tuple val(sample_name), path("${sample_name}_cascadia.ssl"), val(data_format)
@@ -92,15 +113,11 @@ process RUN_CASCADIA {
     script:
     def input_name = input_file.getName()
 
-    def model_path = cascadia_model_file \
-        ? "\$WORKDIR/${cascadia_model_file.getName()}"
-        : "/opt/models/cascadia.ckpt"
-
     """
     set -euo pipefail
     WORKDIR="\$(pwd)"
 
-    cascadia sequence "\$WORKDIR/${input_name}" "${model_path}" -o "\$WORKDIR/${sample_name}_cascadia"
+    cascadia sequence "\$WORKDIR/${input_name}" "/opt/models/cascadia.ckpt" -o "\$WORKDIR/${sample_name}_cascadia"
     """
 }
 
@@ -135,10 +152,17 @@ workflow {
         Channel.value(file(params.model_file))
     )
 
-    cascadia_results = RUN_CASCADIA(
-        samples_ch,
-        cascadia_model_ch
-    )
+    dia_samples_ch = samples_ch.filter { sample_name, input_file, data_format ->
+        data_format == 'dia'
+    }
+
+    cascadia_results =
+        params.cascadia_model_file
+            ? RUN_CASCADIA_WITH_MODEL(
+                dia_samples_ch,
+                Channel.value(file(params.cascadia_model_file))
+              )
+            : RUN_CASCADIA_BUILTIN_MODEL(dia_samples_ch)
 
     all_results = xuanjinovo_results.mix(cascadia_results)
 
