@@ -2,23 +2,6 @@
 .git
 .gitignore
 
-# Python
-__pycache__/
-*.py[cod]
-*.so
-*.egg
-*.egg-info/
-build/
-dist/
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-.coverage
-htmlcov/
-.venv/
-venv/
-env/
-
 # Jupyter / notebooks
 .ipynb_checkpoints/
 
