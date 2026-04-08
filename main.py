@@ -15,7 +15,8 @@ def read_cascadia(file, score_threshold=0.8):
         header = f.readline()
         for line in f:
             line = line.strip().split('\t')
-            peptide = line[3]
+            prediction = line[3]
+            peptide = re.sub(r"\[.*?\]", "", prediction)
             score = float(line[5])
             if score >= score_threshold:
                 peptides[str(c)] = peptide
