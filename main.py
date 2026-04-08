@@ -7,7 +7,7 @@ Created on Sun Nov 23 23:27:34 2025
 import sys
 from pathlib import Path
 import re
-from .gtdb import GTDB, strip_accession_prefix
+#from .gtdb import GTDB, strip_accession_prefix
 
 GENUS_SCORE_THRESHOLD = 1402
 
@@ -54,7 +54,7 @@ if data_format == 'dia':
 elif data_format == 'dda':
     peptides = read_xuanjinovo(input_file)
 
-gtdb = GTDB()
+#gtdb = GTDB()
 
 while True:
     
