@@ -1,41 +1,5 @@
-nextflow.enable.dsl=2
-
-if( !file(params.model_file).exists() ) {
-    error "XuanjiNovo model file not found: ${params.model_file}"
-}
-
-if( params.cascadia_model_file ) {
-    if( !file(params.cascadia_model_file).exists() ) {
-        error "Cascadia model file not found: ${params.cascadia_model_file}"
-    }
-}
-
-Channel
-    .fromPath(params.samplesheet, checkIfExists: true)
-    .splitCsv(header: true, sep: '\t')
-    .map { row ->
-        def sample_name  = row.sample_name?.toString()?.trim()
-        def file_path    = row.file_path?.toString()?.trim()
-        def data_format  = row.data_format?.toString()?.trim()?.toLowerCase()
-
-        if( !sample_name || !file_path || !data_format ) {
-            error "Each row in samples.tsv must contain sample_name, file_path, and data_format"
-        }
-
-        if( !(data_format in ['dda', 'dia']) ) {
-            error "Unsupported data_format '${data_format}' for sample '${sample_name}'. Supported values: dda, dia"
-        }
-
-        def input_file = file(file_path)
-        if( !input_file.exists() ) {
-            error "Input file not found for sample '${sample_name}': ${file_path}"
-        }
-
-        tuple(sample_name, input_file, data_format)
-    }
-    .set { samples_ch }
-
 process RUN_XUANJINOVO {
+    label 'gpu'
     tag { sample_name }
 
     publishDir { "${params.outdir}/${sample_name}" }, mode: 'copy'
@@ -70,6 +34,7 @@ process RUN_XUANJINOVO {
 }
 
 process RUN_CASCADIA_WITH_MODEL {
+    label 'gpu'
     tag { sample_name }
 
     publishDir { "${params.outdir}/${sample_name}" }, mode: 'copy'
@@ -97,6 +62,7 @@ process RUN_CASCADIA_WITH_MODEL {
 }
 
 process RUN_CASCADIA_BUILTIN_MODEL {
+    label 'gpu'
     tag { sample_name }
 
     publishDir { "${params.outdir}/${sample_name}" }, mode: 'copy'
@@ -119,52 +85,4 @@ process RUN_CASCADIA_BUILTIN_MODEL {
 
     cascadia sequence "\$WORKDIR/${input_name}" "/opt/models/cascadia.ckpt" -o "\$WORKDIR/${sample_name}_cascadia"
     """
-}
-
-process RUN_NOVOTAX {
-    tag { sample_name }
-
-    publishDir { "${params.outdir}/${sample_name}" }, mode: 'copy'
-
-    input:
-    tuple val(sample_name), path(result_file), val(data_format)
-
-    output:
-    path "${sample_name}_novotax.fasta"
-
-    script:
-    def result_name = result_file.getName()
-
-    """
-    set -euo pipefail
-
-    python /app/main.py \
-      "${sample_name}" \
-      "${result_name}" \
-      "${data_format}" \
-      "${sample_name}_novotax.fasta"
-    """
-}
-
-workflow {
-    xuanjinovo_results = RUN_XUANJINOVO(
-        samples_ch,
-        Channel.value(file(params.model_file))
-    )
-
-    dia_samples_ch = samples_ch.filter { sample_name, input_file, data_format ->
-        data_format == 'dia'
-    }
-
-    cascadia_results =
-        params.cascadia_model_file
-            ? RUN_CASCADIA_WITH_MODEL(
-                dia_samples_ch,
-                Channel.value(file(params.cascadia_model_file))
-              )
-            : RUN_CASCADIA_BUILTIN_MODEL(dia_samples_ch)
-
-    all_results = xuanjinovo_results.mix(cascadia_results)
-
-    RUN_NOVOTAX(all_results)
 }
