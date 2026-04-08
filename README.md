@@ -6,7 +6,7 @@ Thank you for your interest in NovoTax! We're very excited about releasing the f
 
 ## What is NovoTax?
 
-![Figure 1 from the application note showing the NovoTax workflow](assets/images/figure1.png)
+<img src="assets/images/workflow.png" alt="NovoTax workflow" height="500">
 
 **NovoTax** is a modular pipeline for identifying prokaryotic strains from mass spectrometry-based proteomics data.
 

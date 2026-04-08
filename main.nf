@@ -14,7 +14,7 @@ Channel
     .map { row ->
         def sample_name  = row.sample_name?.toString()?.trim()
         def file_path    = row.file_path?.toString()?.trim()
-        def data_format = row.data_format?.toString()?.trim()?.toLowerCase()
+        def data_format  = row.data_format?.toString()?.trim()?.toLowerCase()
 
         if( !sample_name || !file_path || !data_format ) {
             error "Each row in samples.tsv must contain sample_name, file_path, and data_format"
@@ -37,14 +37,14 @@ Channel
 process RUN_XUANJINOVO {
     tag { sample_name }
 
-    publishDir params.outdir, mode: 'copy'
+    publishDir { "${params.outdir}/${sample_name}" }, mode: 'copy'
 
     input:
     tuple val(sample_name), path(peak_file), val(data_format)
     path model_file
 
     output:
-    path "${sample_name}_xuanjinovo.tsv"
+    tuple val(sample_name), path("${sample_name}_xuanjinovo.tsv")
 
     when:
     data_format == 'dda'
@@ -71,14 +71,14 @@ process RUN_XUANJINOVO {
 process RUN_CASCADIA {
     tag { sample_name }
 
-    publishDir params.outdir, mode: 'copy'
+    publishDir { "${params.outdir}/${sample_name}" }, mode: 'copy'
 
     input:
     tuple val(sample_name), path(input_file), val(data_format)
     path cascadia_model_file
 
     output:
-    path "${sample_name}_cascadia.ssl"
+    tuple val(sample_name), path("${sample_name}_cascadia.ssl")
 
     when:
     data_format == 'dia'
@@ -88,20 +88,49 @@ process RUN_CASCADIA {
     def cascadia_model_name = cascadia_model_file.getName()
 
     """
+    set -euo pipefail
     WORKDIR="\$(pwd)"
 
     cascadia sequence "\$WORKDIR/${input_name}" "\$WORKDIR/${cascadia_model_name}" -o "\$WORKDIR/${sample_name}_cascadia"
     """
 }
 
+process RUN_NOVOTAX {
+    tag { sample_name }
+
+    publishDir { "${params.outdir}/${sample_name}" }, mode: 'copy'
+
+    input:
+    tuple val(sample_name), path(result_file)
+
+    output:
+    path "${sample_name}_linecount.txt"
+
+    script:
+    def result_name = result_file.getName()
+
+    """
+    set -euo pipefail
+
+    python /app/count_lines.py \
+      "${sample_name}" \
+      "${result_name}" \
+      "${sample_name}_linecount.txt"
+    """
+}
+
 workflow {
-    RUN_XUANJINOVO(
+    xuanjinovo_results = RUN_XUANJINOVO(
         samples_ch,
         Channel.value(file(params.model_file))
     )
 
-    RUN_CASCADIA(
+    cascadia_results = RUN_CASCADIA(
         samples_ch,
         Channel.value(file(params.cascadia_model_file))
     )
+
+    all_results = xuanjinovo_results.mix(cascadia_results)
+
+    COUNT_LINES(all_results)
 }
