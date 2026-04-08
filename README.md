@@ -1,11 +1,12 @@
 # NovoTax: prokaryotic strain identification from mass spectrometry-based proteomics data
 
-**Dennis Svedberg, André Mateus**  
-Department of Chemistry, Umeå University, Umeå, Sweden  
-Laboratory for Molecular Infection Medicine Sweden (MIMS), Umeå, Sweden  
-Umeå Center for Microbial Research (UCMR), Umeå, Sweden
+
+## Under final revision
+Thank you for your interest in NovoTax! We're very excited about releasing the full pipeline as soon as possible and hope to have it out by the end of the week. Check back soon!
 
 ## What is NovoTax?
+
+![Figure 1 from the application note showing the NovoTax workflow](assets/images/figure1.png)
 
 **NovoTax** is a modular pipeline for identifying prokaryotic strains from mass spectrometry-based proteomics data.
 
@@ -111,13 +112,31 @@ The pipeline writes one output folder per sample into the output directory.
 nextflow run main.nf -resume
 ```
 
----
 
 ## Cite
 
-If you use **NovoTax**, please cite:
+If you use **NovoTax**, please cite the tools that make this possible:
 
-**Svedberg D, Mateus A.**  
+### NovoTax
+Svedberg D, Mateus A.  
 *NovoTax: prokaryotic strain identification from mass spectrometry-based proteomics data.*  
-bioRxiv (2026).  
-DOI: `10.64898/2026.04.02.715787`
+bioRxiv. 2026.  
+DOI: https://doi.org/10.64898/2026.04.02.715787
+
+### Cascadia
+Sanders J, Wen B, Rudnick PA, et al.  
+*A transformer model for de novo sequencing of data-independent acquisition mass spectrometry data.*  
+Nat Methods. 2025;22:1447–1453.  
+DOI: https://doi.org/10.1038/s41592-025-02718-y
+
+### XuanjiNovo
+Jun A, Zhang X, et al.  
+*MassNet: billion-scale AI-friendly mass spectral corpus enables robust de novo peptide sequencing.*  
+bioRxiv. 2025.  
+DOI: https://doi.org/10.1101/2025.06.20.660691
+
+### MMseqs2
+Steinegger M, Söding J.  
+*MMseqs2 enables sensitive protein sequence searching for the analysis of massive data sets.*  
+Nat Biotechnol. 2017;35:1026–1028.  
+DOI: https://doi.org/10.1038/nbt.3988
