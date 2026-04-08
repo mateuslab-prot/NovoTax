@@ -81,24 +81,18 @@ nextflow -version
 
 ## 3. Install Rootless Docker with GPU support
 
-Rootless Docker lets you run Docker **without root privileges**, improving isolation and security.  
+Rootless Docker lets you run Docker [**without root privileges**](https://docs.docker.com/engine/security/rootless/), improving isolation and security.  
 
->Docs: https://docs.docker.com/engine/security/rootless/
-
-GPU access is needed for de novo sequencers. The installation differs depending on your chosen platform. Follow the instructions below for:
+[GPU access](https://docs.docker.com/compose/how-tos/gpu-support/) is needed for de novo sequencers by installing the [NVIDIA container toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html). The installation differs depending on your chosen platform. Follow the instructions below for:
 - [WSL](#31-wsl)
 - [Ubuntu](#32-ubuntu)
 
 ## 3.1 WSL
 
 ### Install
-
-Install prerequisites
 ```bash
 sudo apt install -y uidmap dbus-user-session iptables
 ```
-
-Get rootless Docker
 ```bash
 curl -fsSL https://get.docker.com/rootless | sh
 ```
@@ -106,7 +100,6 @@ curl -fsSL https://get.docker.com/rootless | sh
 
 ### Setup Environment
 
-Add Docker host to user path
 ```bash
 echo 'export PATH=$HOME/bin:$PATH' >> ~/.bashrc
 ```
@@ -145,9 +138,9 @@ Test that the GPU is available within WSL, try
 nvidia-smi
 ```
 
-If this fails, fix Windows NVIDIA driver issues. The issue is unlikely to lie within WSL. Please note that GPU drivers should not be installed within WSL but is handed through Windows.
+If this fails, fix Windows NVIDIA driver issues. The issue is unlikely to lie within WSL.
 
-If nvidia-smi shows your GPU details, you can proceed to setup the NVIDIA container toolkit. First by adding the NVIDIA channel to the keyring:
+If it works, you can setup the NVIDIA container toolkit, first by adding the NVIDIA channel to the keyring:
 
 ```bash
 curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | \
@@ -160,7 +153,7 @@ curl -fsSL https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-contai
   sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list >/dev/null
 ```
 
-After these steps it is required to update the channel list and retrieve the nvidia-container-toolkit:
+After these steps it is required to update the channel list:
 
 ```bash
 sudo apt-get update
@@ -189,7 +182,7 @@ Docker should now be able to access the GPU and CUDA toolkit. Running the comman
 docker run --rm --gpus all nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
 ```
 
-If Docker is correctly installed, together with Nextflow, you are now ready to run [NovoTax](#example.md).
+Before running NovoTax, [check that the environment is ready](#4-check-that-the-environment-is-ready).
 
 ## 3.2 Ubuntu
 
@@ -220,15 +213,9 @@ Running the command below should show GPU and driver details.
 docker run --rm --gpus all nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
 ```
 
-If Docker is correctly installed you are now ready to run [NovoTax](example.md).
+Before running NovoTax, [check that the environment is ready](#4-check-that-the-environment-is-ready).
 
 ---
-
-### References
-
-- Docker Rootless: https://docs.docker.com/engine/security/rootless/
-- NVIDIA Toolkit: https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html
-- Docker GPU usage: https://docs.docker.com/compose/how-tos/gpu-support/
 
 ## 4. Check that the environment is ready
 
