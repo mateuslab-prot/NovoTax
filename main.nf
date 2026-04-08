@@ -44,7 +44,7 @@ process RUN_XUANJINOVO {
     path model_file
 
     output:
-    tuple val(sample_name), path("${sample_name}_xuanjinovo.tsv")
+    tuple val(sample_name), path("${sample_name}_xuanjinovo.tsv"), val(data_format)
 
     when:
     data_format == 'dda'
@@ -78,7 +78,7 @@ process RUN_CASCADIA {
     path cascadia_model_file
 
     output:
-    tuple val(sample_name), path("${sample_name}_cascadia.ssl")
+    tuple val(sample_name), path("${sample_name}_cascadia.ssl"), val(data_format)
 
     when:
     data_format == 'dia'
@@ -101,10 +101,10 @@ process RUN_NOVOTAX {
     publishDir { "${params.outdir}/${sample_name}" }, mode: 'copy'
 
     input:
-    tuple val(sample_name), path(result_file)
+    tuple val(sample_name), path(result_file), val(data_format)
 
     output:
-    path "${sample_name}_linecount.txt"
+    path "${sample_name}_novotax.fasta"
 
     script:
     def result_name = result_file.getName()
@@ -112,10 +112,11 @@ process RUN_NOVOTAX {
     """
     set -euo pipefail
 
-    python /app/novotax_ph.py \
+    python /app/main.py \
       "${sample_name}" \
       "${result_name}" \
-      "${sample_name}_linecount.txt"
+      "${data_format}" \
+      "${sample_name}_novotax.fasta"
     """
 }
 

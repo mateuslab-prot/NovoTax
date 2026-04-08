@@ -6,6 +6,7 @@ Created on Sun Nov 23 23:27:34 2025
 
 import sys
 from pathlib import Path
+import re
 
 def read_cascadia(file, score_threshold=0.8):
     peptides = dict()
