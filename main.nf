@@ -4,8 +4,10 @@ if( !file(params.model_file).exists() ) {
     error "XuanjiNovo model file not found: ${params.model_file}"
 }
 
-if( !file(params.cascadia_model_file).exists() ) {
-    error "Cascadia model file not found: ${params.cascadia_model_file}"
+if( params.cascadia_model_file ) {
+    if( !file(params.cascadia_model_file).exists() ) {
+        error "Cascadia model file not found: ${params.cascadia_model_file}"
+    }
 }
 
 Channel
@@ -32,6 +34,10 @@ Channel
         tuple(sample_name, input_file, data_format)
     }
     .set { samples_ch }
+
+cascadia_model_ch = params.cascadia_model_file \
+    ? Channel.value(file(params.cascadia_model_file))
+    : Channel.empty()
 
 
 process RUN_XUANJINOVO {
@@ -75,7 +81,7 @@ process RUN_CASCADIA {
 
     input:
     tuple val(sample_name), path(input_file), val(data_format)
-    path cascadia_model_file
+    path cascadia_model_file, optional: true
 
     output:
     tuple val(sample_name), path("${sample_name}_cascadia.ssl"), val(data_format)
@@ -84,14 +90,17 @@ process RUN_CASCADIA {
     data_format == 'dia'
 
     script:
-    def input_name          = input_file.getName()
-    def cascadia_model_name = cascadia_model_file.getName()
+    def input_name = input_file.getName()
+
+    def model_path = cascadia_model_file \
+        ? "\$WORKDIR/${cascadia_model_file.getName()}"
+        : "/opt/models/cascadia.ckpt"
 
     """
     set -euo pipefail
     WORKDIR="\$(pwd)"
 
-    cascadia sequence "\$WORKDIR/${input_name}" "\$WORKDIR/${cascadia_model_name}" -o "\$WORKDIR/${sample_name}_cascadia"
+    cascadia sequence "\$WORKDIR/${input_name}" "${model_path}" -o "\$WORKDIR/${sample_name}_cascadia"
     """
 }
 
@@ -128,7 +137,7 @@ workflow {
 
     cascadia_results = RUN_CASCADIA(
         samples_ch,
-        Channel.value(file(params.cascadia_model_file))
+        cascadia_model_ch
     )
 
     all_results = xuanjinovo_results.mix(cascadia_results)

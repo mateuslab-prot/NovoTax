@@ -7,6 +7,9 @@ Created on Sun Nov 23 23:27:34 2025
 import sys
 from pathlib import Path
 import re
+from .gtdb import GTDB, strip_accession_prefix
+
+GENUS_SCORE_THRESHOLD = 1402
 
 def read_cascadia(file, score_threshold=0.8):
     peptides = dict()
@@ -50,6 +53,14 @@ if data_format == 'dia':
     peptides = read_cascadia(input_file)
 elif data_format == 'dda':
     peptides = read_xuanjinovo(input_file)
+
+gtdb = GTDB()
+
+while True:
+    
+    genus_score = GENUS_SCORE_THRESHOLD + 1
+    if genus_score > GENUS_SCORE_THRESHOLD:
+        break
 
 with output_file.open('w', encoding='utf-8') as out:
     for peptide, seq in peptides.items():

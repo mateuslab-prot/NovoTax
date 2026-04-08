@@ -53,7 +53,7 @@ Check whether Nextflow is already available:
 nextflow -version
 ```
 
-If needed, install Nextflow with:
+If needed, install Nextflow with: # Note to 
 
 ```bash
 curl -s https://get.nextflow.io | bash
@@ -80,6 +80,14 @@ nextflow -version
 ```
 
 ## 3. Install Rootless Docker with GPU support
+
+Check if you have Docker
+
+```bash
+docker --version
+```
+
+If not Docker needs to be installed.
 
 Rootless Docker lets you run Docker [**without root privileges**](https://docs.docker.com/engine/security/rootless/), improving isolation and security.  
 
@@ -185,6 +193,12 @@ docker run --rm --gpus all nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
 Before running NovoTax, [check that the environment is ready](#4-check-that-the-environment-is-ready).
 
 ## 3.2 Ubuntu
+
+```bash
+curl -fsSL https://get.docker.com/rootless | sh
+```
+
+
 
 Rootless Docker **can use GPUs**, but requires the NVIDIA Container Toolkit.
 
