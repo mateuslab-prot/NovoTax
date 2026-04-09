@@ -4,7 +4,7 @@ if( !file(params.model_file).exists() ) {
     error "XuanjiNovo model file not found: ${params.model_file}"
 }
 
-if( params.cascadia_model_file ) {
+if( params.cascadia_model_file != null ) {
     if( !file(params.cascadia_model_file).exists() ) {
         error "Cascadia model file not found: ${params.cascadia_model_file}"
     }
@@ -159,7 +159,7 @@ workflow {
         data_format == 'dia'
     }
 
-    cascadia_results = params.cascadia_model_file
+    cascadia_results = params.cascadia_model_file != null
         ? RUN_CASCADIA_WITH_MODEL(
             dia_samples_ch,
             Channel.value(file(params.cascadia_model_file))
