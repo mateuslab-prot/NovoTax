@@ -44,16 +44,11 @@ java -version
 
 If you don't have a compatible version of Java installed, it is recommended that you install it through SDKMAN.
 
-1. Install SDKMAN:
-  ```bash
-  curl -s https://get.sdkman.io | bash
-  ```
-2. Open a new terminal.
-3. Install Java:
+1. If needed, install Java 17 or newer using your system package manager or a JDK distribution of your choice. For example, using
 ```bash
-sdk install java 17.0.10-tem
+sudo apt install openjdk-17-jre-headless
 ```
-4. Confirm Java is installed correctly:
+2. Confirm Java is installed correctly:
 ```bash
 java -version
 ```
