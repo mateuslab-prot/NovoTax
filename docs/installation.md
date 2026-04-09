@@ -132,20 +132,43 @@ apptainer exec --nvccli docker://nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
 If nvidia-smi shows the systems GPU details the Apptainer installation is working correctly with the systems GPUs. You can move on to [verify the setup](#3-verify-the-environment-with-gpu).
 
 ## 2.2 Docker
-Rootless Docker lets you run Docker without root privileges, improving isolation and security.
-
-GPU access is needed for de novo sequencers by installing the NVIDIA container toolkit. The installation differs depending on your chosen platform. Follow the instructions below for:
+Check if Docker is already installed:
 ```bash
 docker --version
 ```
+If it is, you can skip to the Docker GPU section. If not, proceed below.
 
-If not Docker needs to be installed.
+### Install Docker
 
 Rootless Docker lets you run Docker [**without root privileges**](https://docs.docker.com/engine/security/rootless/), improving isolation and security.  
 
-[GPU access](https://docs.docker.com/compose/how-tos/gpu-support/) is needed for de novo sequencers by installing the [NVIDIA container toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html). The installation differs depending on your chosen platform. Follow the instructions below for:
-- [WSL](#31-wsl)
-- [Ubuntu](#32-ubuntu)
+First install Docker dependencies:
+```bash
+sudo apt install -y uidmap dbus-user-session iptables
+```
+Then proceed with installing rootless Docker:
+```bash
+curl -fsSL https://get.docker.com/rootless | sh
+```
+Setup environment variables:
+```bash
+echo 'export PATH=$HOME/bin:$PATH' >> ~/.bashrc
+echo 'export DOCKER_HOST=unix:///run/user/$(id -u)/docker.sock' >> ~/.bashrc
+source ~/.bashrc
+````
+
+Start the Docker services:
+```bash
+systemctl --user start docker
+systemctl --user enable docker
+```
+Verify rootless Docker:
+```bash
+docker run hello-world
+```
+
+### Install libnvidia-container
+[GPU access](https://docs.docker.com/compose/how-tos/gpu-support/) is needed for the de novo sequencers by installing the NVIDIA container toolkit. The commands below are typically enough for the installation, if not please refer to the [official guide](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html).
 
 Add libnvidia-container to keyring:
 ```bash
@@ -159,11 +182,21 @@ curl -fsSL https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-contai
   sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list >/dev/null
 ```
 
-After the addition to the keyring the package can be installed:
+After the addition to the keyring, `nvidia-container-toolkit` can be installed:
 
 ```bash
 sudo apt-get update
 sudo apt-get install -y nvidia-container-toolkit
+```
+Restart the Docker services and update the config:
+```bash
+nvidia-ctk runtime configure --runtime=docker --config=$HOME/.config/docker/daemon.json
+systemctl --user restart docker
+sudo nvidia-ctk config --set nvidia-container-cli.no-cgroups --in-place
+```
+Now verify that Docker can access the GPU:
+```bash
+docker run --rm --gpus all nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
 ```
 
 ## 3. Verify the environment with GPU
