@@ -62,6 +62,7 @@ while True:
     if genus_score > GENUS_SCORE_THRESHOLD:
         break
 
+unique_peptides = {seq for seq in peptides.values()}
 with output_file.open('w', encoding='utf-8') as out:
-    for peptide, seq in peptides.items():
-        out.write(f'>{peptide}\n{seq}\n')
+    for seq in unique_peptides():
+        out.write(f'{seq}\n')
