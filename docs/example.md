@@ -16,6 +16,7 @@ cd NovoTax
 ```bash
 nextflow run main.nf
 ```
+**Note that the first NovoTax run will take a longer time due to first having to retrieve all the containers. Expect the download to take 10-15 minutes and then the demo files takes roughly ~5 minutes to run on a modern desktop GPU.**
 ## Retrieving models and databases
 
 ### Models
