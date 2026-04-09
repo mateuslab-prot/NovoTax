@@ -1,7 +1,9 @@
 nextflow.enable.dsl=2
 
-if( !file(params.model_file).exists() ) {
-    error "XuanjiNovo model file not found: ${params.model_file}"
+if( params.model_file != null ) {
+    if( !file(params.model_file).exists() ) {
+        error "XuanjiNovo model file not found: ${params.model_file}"
+    }
 }
 
 if( params.cascadia_model_file != null ) {
@@ -35,7 +37,7 @@ Channel
     }
     .set { samples_ch }
 
-process RUN_XUANJINOVO {
+process RUN_XUANJINOVO_WITH_MODEL {
     tag { sample_name }
 
     publishDir { "${params.outdir}/${sample_name}" }, mode: 'copy'
@@ -66,6 +68,41 @@ process RUN_XUANJINOVO {
       --mode=${params.mode} \
       --peak_path="\$WORKDIR/${peak_name}" \
       --model="\$WORKDIR/${model_name}" \
+      --output="\$OUT_DIR"
+
+    cp "\$OUT_DIR/denovo.tsv" "\$WORKDIR/${sample_name}_xuanjinovo.tsv"
+    """
+}
+
+process RUN_XUANJINOVO_DEFAULT_MODEL {
+    tag { sample_name }
+
+    publishDir { "${params.outdir}/${sample_name}" }, mode: 'copy'
+
+    input:
+    tuple val(sample_name), path(peak_file), val(data_format)
+
+    output:
+    tuple val(sample_name), path("${sample_name}_xuanjinovo.tsv"), val(data_format)
+
+    when:
+    data_format == 'dda'
+
+    script:
+    def peak_name = peak_file.getName()
+
+    """
+    set -euo pipefail
+    WORKDIR="\$(pwd)"
+    OUT_DIR="\$WORKDIR/${sample_name}_xuanjinovo"
+
+    export NUMBA_CACHE_DIR="\$WORKDIR/.numba_cache"
+    mkdir -p "\$NUMBA_CACHE_DIR"
+
+    python -m XuanjiNovo.XuanjiNovo \
+      --mode=${params.mode} \
+      --peak_path="\$WORKDIR/${peak_name}" \
+      --model="/opt/models/XuanjiNovo_130M_massnet_massivekb.ckpt" \
       --output="\$OUT_DIR"
 
     cp "\$OUT_DIR/denovo.tsv" "\$WORKDIR/${sample_name}_xuanjinovo.tsv"
@@ -150,10 +187,16 @@ process RUN_NOVOTAX {
 }
 
 workflow {
-    xuanjinovo_results = RUN_XUANJINOVO(
-        samples_ch,
-        Channel.value(file(params.model_file))
-    )
+    dda_samples_ch = samples_ch.filter { sample_name, input_file, data_format ->
+        data_format == 'dda'
+    }
+
+    xuanjinovo_results = params.model_file != null
+        ? RUN_XUANJINOVO_WITH_MODEL(
+            dda_samples_ch,
+            Channel.value(file(params.model_file))
+          )
+        : RUN_XUANJINOVO_DEFAULT_MODEL(dda_samples_ch)
 
     dia_samples_ch = samples_ch.filter { sample_name, input_file, data_format ->
         data_format == 'dia'
