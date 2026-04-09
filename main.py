@@ -64,5 +64,5 @@ while True:
 
 unique_peptides = {seq for seq in peptides.values()}
 with output_file.open('w', encoding='utf-8') as out:
-    for seq in unique_peptides():
+    for seq in unique_peptides:
         out.write(f'{seq}\n')
