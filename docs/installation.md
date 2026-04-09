@@ -79,9 +79,21 @@ Confirm that Nextflow is installed:
 nextflow -version
 ```
 
-## 3. Install Rootless Docker with GPU support
+## 3. Container platform
 
-Check if you have Docker
+NovoTax utilises containerisation for reproducability and modularity. There's two main container platforms supported, Apptainer and Docker. If Docker is already installed and working (`docker --version`) we recommend continuing using that. If this is the first time you use containers or work in an HPC environment we instead recommend Apptainer
+
+## 3.1 Apptainer
+
+```bash
+sudo apt install -y software-properties-common
+sudo add-apt-repository -y ppa:apptainer/ppa
+sudo apt update
+sudo apt install -y apptainer
+```
+
+
+## 3.2 Docker
 
 ```bash
 docker --version

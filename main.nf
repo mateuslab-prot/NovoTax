@@ -59,6 +59,9 @@ process RUN_XUANJINOVO {
     WORKDIR="\$(pwd)"
     OUT_DIR="\$WORKDIR/${sample_name}_xuanjinovo"
 
+    export NUMBA_CACHE_DIR="\$WORKDIR/.numba_cache"
+    mkdir -p "\$NUMBA_CACHE_DIR"
+
     python -m XuanjiNovo.XuanjiNovo \
       --mode=${params.mode} \
       --peak_path="\$WORKDIR/${peak_name}" \
