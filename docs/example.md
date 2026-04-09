@@ -1,12 +1,28 @@
 # Example usage
 
+## Quickstart / Demo
+1. Clone the NovoTax repository:
+```bash
+git clone https://github.com/mateuslab-prot/NovoTax/
+```
+2. Move into the repository:
+```bash
+cd NovoTax
+```
+3. Run NovoTax on the example data using the profile that matches your environment
+    - Default (no profile flag): Ubuntu GPU
+    - `-profile apptainer_wsl_gpu`: Apptainer WSL GPU
+    - `-profile docker_gpu`: Docker GPU for Ubuntu/WSL
+```bash
+nextflow run main.nf
+```
 ## Retrieving models and databases
 
-### XuanjiNovo
-[XuanjiNovo_130M_massnet_massivekb.ckpt](https://huggingface.co/Wyattz23/XuanjiNovo/resolve/main/XuanjiNovo_130M_massnet_massivekb.ckpt)
+### Models
+I moved these into the container images but can still explain the different ones available for completion.
 
-### Cascadia
-TODO: Upload Cascadia model to non-Google drive location
+### Databases
+Zenodo? LFS?
 
 ## Data preparation
 
