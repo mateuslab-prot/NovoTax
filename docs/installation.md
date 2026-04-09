@@ -121,7 +121,7 @@ sudo apt-get update
 sudo apt-get install -y nvidia-container-toolkit
 ```
 
-### Verify installation
+### Verify installation with GPU
 **Ubuntu**:
 ```bash
 apptainer exec --nv docker://nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
@@ -132,7 +132,9 @@ apptainer exec --nvccli docker://nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
 ```
 
 ## 2.2 Docker
+Rootless Docker lets you run Docker without root privileges, improving isolation and security.
 
+GPU access is needed for de novo sequencers by installing the NVIDIA container toolkit. The installation differs depending on your chosen platform. Follow the instructions below for:
 ```bash
 docker --version
 ```
@@ -145,7 +147,6 @@ Rootless Docker lets you run Docker [**without root privileges**](https://docs.d
 - [WSL](#31-wsl)
 - [Ubuntu](#32-ubuntu)
 
-## 2.3 nvidia-container-toolkit
 Add libnvidia-container to keyring:
 ```bash
 curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | \
@@ -165,7 +166,7 @@ sudo apt-get update
 sudo apt-get install -y nvidia-container-toolkit
 ```
 
-## 3. Check that the environment is ready
+## 3. Verify the environment with GPU
 
 Before running NovoTax, make sure the foillowing commands work:
 
@@ -175,20 +176,17 @@ nextflow -version
 
 ## If using Docker
 ```bash
-docker --version
-```
-```bash
 docker run --rm --gpus all nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
 ```
 
 ## If using Apptainer
 
-### Ubuntu
+**Ubuntu**
 ```bash
 apptainer exec --nv docker://nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
 ```
 
-### WSL
+**WSL**
 ```bash
 apptainer exec --nv --nvccli docker://nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
 ```
