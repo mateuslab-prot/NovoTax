@@ -101,7 +101,7 @@ apptainer version
 ```
 
 ### Extra WSL step
-If you're on WSL, you will also need to install the nvidia-container-toolkit to utilise the GPU. Start by add libnvidia-container repository to the keyring:
+If you're on WSL, you will also need to install the nvidia-container-toolkit to utilise the GPU. Start by adding the libnvidia-container repository to the keyring:
 ```bash
 curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | \
   sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
@@ -198,7 +198,7 @@ Now verify that Docker can access the GPU:
 ```bash
 docker run --rm --gpus all nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
 ```
-
+If nvidia-smi shows the systems GPU details the Docker installation is working correctly with the systems GPUs. You can move on to [verify the setup](#3-verify-the-environment-with-gpu).
 ## 3. Verify the environment with GPU
 
 Before running NovoTax, make sure the foillowing commands work:
