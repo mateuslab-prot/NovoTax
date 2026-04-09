@@ -92,6 +92,9 @@ sudo apt update
 sudo apt install -y apptainer
 ```
 
+```bash
+apptainer exec --nv docker://nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
+```
 
 ## 3.2 Docker
 

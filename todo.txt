@@ -5,16 +5,10 @@ Example files from "our" datasets
     2. Contaminated sample, extreme one with single contaminant
     3. One DIA
 
-Include sample.tsv example, with our example files
+
 
 Add experiment_name to sample.tsv
 Test if sample names are unique for each experiment name
 Test if dda has .mgf as input and dia .mzML
 
-Figure, just workflow
 
-Merge README, fix link on top to doc
-
-Add NovoTax pipeline, run test at home
-
-Get Max to try
