@@ -46,7 +46,7 @@ If you don't have a compatible version of Java installed, it is recommended that
 
 1. If needed, install Java 17 or newer using your system package manager or a JDK distribution of your choice. For example, using
 ```bash
-sudo apt install openjdk-17-jre-headless
+sudo apt install -y openjdk-17-jre-headless
 ```
 2. Confirm Java is installed correctly:
 ```bash
@@ -101,8 +101,7 @@ apptainer version
 ```
 
 ### Extra WSL step
-If you're on WSL, you will also need to install the nvidia-container-toolkit to utilise the GPU:
-Add libnvidia-container to keyring:
+If you're on WSL, you will also need to install the nvidia-container-toolkit to utilise the GPU. Start by add libnvidia-container repository to the keyring:
 ```bash
 curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | \
   sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
@@ -130,6 +129,7 @@ apptainer exec --nv docker://nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
 ```bash
 apptainer exec --nvccli docker://nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
 ```
+If nvidia-smi shows the systems GPU details the Apptainer installation is working correctly with the systems GPUs. You can move on to [verify the setup](#3-verify-the-environment-with-gpu).
 
 ## 2.2 Docker
 Rootless Docker lets you run Docker without root privileges, improving isolation and security.

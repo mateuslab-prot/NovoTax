@@ -36,7 +36,7 @@ NovoTax is made to accept a list of sample names, file paths and data format usi
 ## Running NovoTax
 
 ```bash
-nextflow run main --sample-path sample.tsv
+nextflow run novotax --sample-path sample.tsv
 ```
 
 For a more detailed view on the tools used in NovoTax please refer to the [tools section](tools.md).
