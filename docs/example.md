@@ -10,19 +10,22 @@ git clone https://github.com/mateuslab-prot/NovoTax/
 cd NovoTax
 ```
 3. Run NovoTax on the example data using the profile that matches your environment
-    - Default (no profile flag): Ubuntu GPU
-    - `-profile apptainer_wsl_gpu`: Apptainer WSL GPU
-    - `-profile docker_gpu`: Docker GPU for Ubuntu/WSL
+    - Default (no profile flag): Apptainer on Ubuntu using GPU
+    - `-profile apptainer_wsl_gpu`: Apptainer on WSL using GPU
+    - `-profile docker_gpu`: Docker on Ubuntu/WSL using GPU
 ```bash
 nextflow run main.nf
 ```
 ## Retrieving models and databases
 
 ### Models
-I moved these into the container images but can still explain the different ones available for completion.
+**XuanjiNovo**:The `XuanjiNovo_130M_massnet_massivekb.ckpt` model finetuned on 30M MassiveKB is included in the XuanjiNovo image. A different model can be used with  `--model_file MODEL_FILE_PATH`.
+
+**Cascadia**
+The base `Cascadia.ckpt` model is included in the Cascadia image. A different model can be used with `--cascadia_model_file MODEL_FILE_PATH`.
 
 ### Databases
-Zenodo? LFS?
+TODO: Update Zenodo / LFS IDs
 
 ## Data preparation
 

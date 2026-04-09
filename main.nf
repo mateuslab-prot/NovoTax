@@ -1,8 +1,8 @@
 nextflow.enable.dsl=2
 
-if( params.model_file != null ) {
-    if( !file(params.model_file).exists() ) {
-        error "XuanjiNovo model file not found: ${params.model_file}"
+if( params.xuanjinovo_model_file != null ) {
+    if( !file(params.xuanjinovo_model_file).exists() ) {
+        error "XuanjiNovo model file not found: ${params.xuanjinovo_model_file}"
     }
 }
 
@@ -44,7 +44,7 @@ process RUN_XUANJINOVO_WITH_MODEL {
 
     input:
     tuple val(sample_name), path(peak_file), val(data_format)
-    path model_file
+    path xuanjinovo_model_file
 
     output:
     tuple val(sample_name), path("${sample_name}_xuanjinovo.tsv"), val(data_format)
@@ -54,7 +54,7 @@ process RUN_XUANJINOVO_WITH_MODEL {
 
     script:
     def peak_name  = peak_file.getName()
-    def model_name = model_file.getName()
+    def model_name = xuanjinovo_model_file.getName()
 
     """
     set -euo pipefail
@@ -191,10 +191,10 @@ workflow {
         data_format == 'dda'
     }
 
-    xuanjinovo_results = params.model_file != null
+    xuanjinovo_results = params.xuanjinovo_model_file != null
         ? RUN_XUANJINOVO_WITH_MODEL(
             dda_samples_ch,
-            Channel.value(file(params.model_file))
+            Channel.value(file(params.xuanjinovo_model_file))
           )
         : RUN_XUANJINOVO_DEFAULT_MODEL(dda_samples_ch)
 
