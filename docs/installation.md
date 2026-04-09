@@ -101,12 +101,35 @@ apptainer version
 ```
 
 ### Extra WSL step
-If you're on WSL, you will also need to install the [nvidia-container-toolkit](#23-nvidia-container-toolkit)
+If you're on WSL, you will also need to install the nvidia-container-toolkit to utilise the GPU:
+Add libnvidia-container to keyring:
+```bash
+curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | \
+  sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+```
 
+```bash
+curl -fsSL https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+  sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+  sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list >/dev/null
+```
+
+After the addition to the keyring the package can be installed:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y nvidia-container-toolkit
+```
+
+### Verify installation
+**Ubuntu**:
 ```bash
 apptainer exec --nv docker://nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
 ```
-
+**WSL**:
+```bash
+apptainer exec --nvccli docker://nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
+```
 
 ## 2.2 Docker
 
@@ -140,19 +163,6 @@ After the addition to the keyring the package can be installed:
 ```bash
 sudo apt-get update
 sudo apt-get install -y nvidia-container-toolkit
-```
-
-```bash
-nvidia-ctk runtime configure --runtime=docker --config=$HOME/.config/docker/daemon.json
-```
-
-The previous step requires that docker is restarted:
-
-```bash
-systemctl --user restart docker
-```
-```bash
-sudo nvidia-ctk config --set nvidia-container-cli.no-cgroups --in-place
 ```
 
 ## 3. Check that the environment is ready
