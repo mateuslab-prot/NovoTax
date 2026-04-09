@@ -1,21 +1,18 @@
 # Installation
 
-NovoTax runs as a **Nextflow** pipeline and uses **Docker** containers for its software environment.
+NovoTax runs as a **Nextflow** pipeline and uses modular **containers** for its software environment.
 
-To run NovoTax locally, install:
+To run NovoTax locally, the following tools are needed:
 
-- [**Java 17 or newer**](#1-install-java)
-- [**Nextflow**](#2-install-nextflow)
-- [**Docker**](#3-install-rootless-docker-with-gpu-support)
-
-NovoTax is packaged as modular Docker files and designed to run through a workflow manager, so both Nextflow and Docker are part of the standard setup.
+- [**Nextflow**](https://www.nextflow.io)
+- [**Docker**](https://www.docker.com) or [**Apptainer**](https://apptainer.org)
 
 ## Supported environment
 
 NovoTax is intended to run on:
 
 - **Windows through WSL2**
-    - To install WSL, follow the guide on https://learn.microsoft.com/en-us/windows/wsl/install
+    - To install WSL, follow the guide [official guide](https://learn.microsoft.com/en-us/windows/wsl/install)
 - **Ubuntu**
 
 
@@ -29,23 +26,7 @@ Ensure that all package channels are up-to-date
 sudo apt update
 ```
 
-## 1. Install Java
-
-Nextflow requires Java.
-
-Check whether Java is already available:
-
-```bash
-java -version
-```
-
-If needed, install **Java 17 or newer** using your system package manager or a JDK distribution of your choice. For example, using
-
-```bash
-sudo apt install openjdk-17-jre-headless
-```
-
-## 2. Install Nextflow
+## 1.  Install Nextflow
 
 Check whether Nextflow is already available:
 
@@ -53,38 +34,66 @@ Check whether Nextflow is already available:
 nextflow -version
 ```
 
-If needed, install Nextflow with: # Note to 
+If not, the steps below is enough for a typical installation. If you face problems during this, please refer to the [official documentation](https://docs.seqera.io/nextflow/install).
 
+### Install Java
+Nextflow requires Java 17 (or later, up to 26). Check which version of Java you have with:
+```bash
+java -version
+```
+
+If you don't have a compatible version of Java installed, it is recommended that you install it through SDKMAN.
+
+1. Install SDKMAN:
+  ```bash
+  curl -s https://get.sdkman.io | bash
+  ```
+2. Open a new terminal.
+3. Install Java:
+```bash
+sdk install java 17.0.10-tem
+```
+4. Confirm Java is installed correctly:
+```bash
+java -version
+```
+
+### Install Nextflow
+1. Download Nextflow:
 ```bash
 curl -s https://get.nextflow.io | bash
 ```
-
-This downloads the `nextflow` executable to the current directory.
-
-Make it executable:
-
+2. Make Nextflow executable:
 ```bash
 chmod +x nextflow
 ```
 
-Move it somewhere in your `PATH`, for example:
-
+3. Move Nextflow into an executable path. For example:
 ```bash
-sudo mv nextflow /usr/local/bin/
+mkdir -p $HOME/.local/bin/
+mv nextflow $HOME/.local/bin/
 ```
 
-Confirm that Nextflow is installed:
-
+### Verify installation
+Verify that Nextflow is installed correctly:
 ```bash
 nextflow -version
 ```
 
-## 3. Container platform
+## 2. Container platform
 
-NovoTax utilises containerisation for reproducability and modularity. There's two main container platforms supported, Apptainer and Docker. If Docker is already installed and working (`docker --version`) we recommend continuing using that. If this is the first time you use containers or work in an HPC environment we instead recommend Apptainer
+NovoTax utilises containerisation for reproducability and modularity. There's two main container platforms supported, Apptainer and Docker. If Docker is already installed and working (`docker --version`) we recommend continuing using that. If this is the first time you use containers or work in an HPC environment we instead recommend Apptainer due to easier installation and usage.
 
-## 3.1 Apptainer
+## 2.1 Apptainer
 
+Check if Apptainer is already available:
+```bash
+apptainer version
+```
+
+If not, the steps below is enough for a typical installation. If you face problems during this, please refer to the [official guide](https://apptainer.org/docs/admin/main/installation.html).
+
+### Install Apptainer
 ```bash
 sudo apt install -y software-properties-common
 sudo add-apt-repository -y ppa:apptainer/ppa
@@ -92,11 +101,12 @@ sudo apt update
 sudo apt install -y apptainer
 ```
 
+### Verify installation
 ```bash
 apptainer exec --nv docker://nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
 ```
 
-## 3.2 Docker
+## 2.2 Docker
 
 ```bash
 docker --version
@@ -248,14 +258,13 @@ Before running NovoTax, [check that the environment is ready](#4-check-that-the-
 
 ## 4. Check that the environment is ready
 
-Before running NovoTax, make sure these commands work:
+Before running NovoTax, make sure the foillowing commands work:
 
-```bash
-java -version
-```
 ```bash
 nextflow -version
 ```
+
+## If using Docker
 ```bash
 docker --version
 ```
@@ -263,4 +272,18 @@ docker --version
 docker run --rm --gpus all nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
 ```
 
-If all of these work, the system is ready to run [NovoTax](example.md).
+## If using Apptainer
+
+### Ubuntu
+```bash
+apptainer exec --nv docker://nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
+```
+
+### WSL
+```bash
+apptainer exec --nv --nvccli docker://nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
+```
+
+
+## Running NovoTax
+If all of these work, you're now ready to run [NovoTax](example.md)!

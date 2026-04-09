@@ -15,6 +15,7 @@ results/
 .report.*
 .dag.*
 .resume*
+.apptainer_cache/
 
 # Local data / test runs
 test_run/
