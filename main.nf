@@ -33,6 +33,16 @@ Channel
             error "Input file not found for sample '${sample_name}': ${file_path}"
         }
 
+        def file_name_lower = input_file.getName().toLowerCase()
+
+        if( data_format == 'dda' && !file_name_lower.endsWith('.mgf') ) {
+            error "Sample '${sample_name}' has data_format 'dda' but input file is not an .mgf file: ${file_path}"
+        }
+
+        if( data_format == 'dia' && !file_name_lower.endsWith('.mzml') ) {
+            error "Sample '${sample_name}' has data_format 'dia' but input file is not an .mzML file: ${file_path}"
+        }
+
         tuple(sample_name, input_file, data_format)
     }
     .set { samples_ch }

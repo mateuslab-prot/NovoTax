@@ -1,6 +1,6 @@
 # NovoTax
 
-NovoTax is a pipeline for identifying the closest **prokaryotic species and strain** directly from **mass spectrometry-based proteomics data**. It starts from raw MS files or peptide predictions, performs **de novo peptide sequencing**, and maps the resulting peptides to reference proteomes in **GTDB** to infer taxonomy. NovoTax is designed as an end-to-end workflow that helps go from raw data to a sample-specific taxonomic assignment and a matching protein database for downstream proteomics analysis. :contentReference[oaicite:0]{index=0}
+NovoTax is a pipeline for identifying the closest **prokaryotic species and strain** directly from **mass spectrometry-based proteomics data**. It starts from raw MS files or peptide predictions, performs **de novo peptide sequencing**, and maps the resulting peptides to reference proteomes in **GTDB** to infer taxonomy. NovoTax is designed as an end-to-end workflow that helps go from raw data to a sample-specific taxonomic assignment and a matching protein database for downstream proteomics analysis.
 
 ## What NovoTax does
 
@@ -30,7 +30,7 @@ Peptide predictions above the confidence threshold are retained for downstream m
 
 ### 2. Database peptide matching
 
-NovoTax matches peptides against **GTDB** using **MMseqs2**. To make the search practical on a large reference database, it uses an iterative strategy:
+NovoTax matches peptides against [**GTDB**](https://gtdb.ecogenomic.org/) using [**MMseqs2**](https://github.com/soedinglab/mmseqs2). To make the search practical on a large reference database, it uses an iterative strategy:
 
 - first a broad search to identify the likely genus
 - then a narrower search to identify the likely species
@@ -40,7 +40,7 @@ This reduces search space, improves speed, and lowers memory use.
 
 ### 3. Taxonomy assignment
 
-NovoTax scores peptide matches based on alignment quality and how specific each peptide is. The best-supported proteome is selected at each step. After strain assignment, matched peptides can be removed and the remaining peptides searched again to identify additional organisms in the sample, such as contaminants.
+NovoTax scores peptide matches based on alignment quality and how specific each peptide is. The best-supported proteome is selected at each step. After strain assignment, matched peptides can be removed and the remaining peptides searched again to identify additional organisms in the sample, such as contaminants or other species present in a community.
 
 ## What NovoTax is useful for
 
