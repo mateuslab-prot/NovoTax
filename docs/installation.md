@@ -132,74 +132,13 @@ apptainer exec --nvccli docker://nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
 If nvidia-smi shows the systems GPU details the Apptainer installation is working correctly with the systems GPUs. You can move on to [verify the setup](#3-verify-the-environment-with-gpu).
 
 ## 2.2 Docker
-Check if Docker is already installed:
-```bash
-docker --version
-```
-If it is, you can skip to the Docker GPU section. If not, proceed below.
-
-### Install Docker
-
-Rootless Docker lets you run Docker [**without root privileges**](https://docs.docker.com/engine/security/rootless/), improving isolation and security.  
-
-First install Docker dependencies:
-```bash
-sudo apt install -y uidmap dbus-user-session iptables
-```
-Then proceed with installing rootless Docker:
-```bash
-curl -fsSL https://get.docker.com/rootless | sh
-```
-Setup environment variables:
-```bash
-echo 'export PATH=$HOME/bin:$PATH' >> ~/.bashrc
-echo 'export DOCKER_HOST=unix:///run/user/$(id -u)/docker.sock' >> ~/.bashrc
-source ~/.bashrc
-````
-
-Start the Docker services:
-```bash
-systemctl --user start docker
-systemctl --user enable docker
-```
-Verify rootless Docker:
-```bash
-docker run hello-world
-```
-
-### Install libnvidia-container
-[GPU access](https://docs.docker.com/compose/how-tos/gpu-support/) is needed for the de novo sequencers by installing the NVIDIA container toolkit. The commands below are typically enough for the installation, if not please refer to the [official guide](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html).
-
-Add libnvidia-container to keyring:
-```bash
-curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | \
-  sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
-```
-
-```bash
-curl -fsSL https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
-  sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
-  sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list >/dev/null
-```
-
-After the addition to the keyring, `nvidia-container-toolkit` can be installed:
-
-```bash
-sudo apt-get update
-sudo apt-get install -y nvidia-container-toolkit
-```
-Restart the Docker services and update the config:
-```bash
-nvidia-ctk runtime configure --runtime=docker --config=$HOME/.config/docker/daemon.json
-systemctl --user restart docker
-sudo nvidia-ctk config --set nvidia-container-cli.no-cgroups --in-place
-```
-Now verify that Docker can access the GPU:
+If you prefer to run Docker, or Docker is already installed on your system, this is also supported. Please make sure that your docker installation can access the systems GPUs with:
 ```bash
 docker run --rm --gpus all nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
 ```
-If nvidia-smi shows the systems GPU details the Docker installation is working correctly with the systems GPUs. You can move on to [verify the setup](#3-verify-the-environment-with-gpu).
-## 3. Verify the environment with GPU
+If this works, you can move on to [verify the environment](#3-verify-the-environment-with-gpu)! If this does not work, please refer to the official documentation to make sure that [rootless Docker](https://docs.docker.com/engine/security/rootless/) and the [NVIDA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) is set up correctly.
+
+## 3. Verify the environment with GPU support
 
 Before running NovoTax, make sure the foillowing commands work:
 
