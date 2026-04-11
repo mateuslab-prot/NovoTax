@@ -40,7 +40,7 @@ This reduces search space, improves speed, and lowers memory use.
 
 ### 3. Taxonomy assignment
 
-NovoTax scores peptide matches based on alignment quality and how specific each peptide is. The best-supported proteome is selected at each step. After strain assignment, matched peptides can be removed and the remaining peptides searched again to identify additional organisms in the sample, such as contaminants or other species present in a community.
+NovoTax scores peptide matches based on alignment quality and how specific each peptide is. The best-supported proteome is selected at each step. After strain assignment, matched peptides are removed, and the remaining peptides are searched again to identify additional organisms in the sample, such as contaminants or other species present in a community.
 
 ## What NovoTax is useful for
 
