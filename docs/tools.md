@@ -22,7 +22,6 @@ Cascadia utilizes a transformer model to perform de novo sequencing of data-inde
     * Locked setuptools and Torch to set versions
     * Added Dockerfile
     * Removal of unimod dependency
-    * 
 * Set Torch precision to high to utilise tensor cores for performance boost on newer generation GPUs `set_float32_matmul_precision('high')`
 
 ### Cite
