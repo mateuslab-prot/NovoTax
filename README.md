@@ -68,8 +68,8 @@ nextflow run main.nf \
 NovoTax outputs several files during runtime.
 * `$SAMPLE_NAME/$SAMPLE_NAME_cascadia.ssl` - Cascadia predictions.
 * `$SAMPLE_NAME/$SAMPLE_NAME_xuanjinovo.tsv`- XuanjiNovo preditions.
-* `$SAMPLE_NAME/$SAMPLE_NAME_unique_peptides.txt`- All unique peptides predicted, for Unipept or other downstream analysis.
-* `$SAMPLE_NAME/$SAMPLE_NAME_novotax_species.tsv` - GTDB accessions and taxonomy for all species predicted to be in the sample, including a relative score.
+* `$SAMPLE_NAME/$SAMPLE_NAME_unique_peptides.txt`- All unique peptides predicted, for [Unipept](https://unipept.ugent.be/) or other downstream analysis.
+* `$SAMPLE_NAME/$SAMPLE_NAME_novotax_species.tsv` - [GTDB](https://gtdb.ecogenomic.org/) accessions and taxonomy for all species predicted to be in the sample, including a relative score.
 * `$SAMPLE_NAME/$SAMPLE_NAME_database.fasta` - Concatenated fasta file for all species predicted by NovoTax to be in the sample for downstream analysis.
 
 
