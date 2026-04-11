@@ -66,6 +66,6 @@ NovoTax can start from:
 
 The main outputs are:
 
-- taxonomic assignment of the sample
+- a list of predicted peptide sequences in the sample
 - the closest matching strain in GTDB
 - a protein sequence database suitable for downstream proteomics analysis
