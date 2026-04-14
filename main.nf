@@ -186,6 +186,29 @@ process RUN_NOVOTAX {
     """
 }
 
+process CREATE_NOVOTAX_DBS {
+    tag "create_dbs"
+
+    publishDir { "${params.outdir}/novotax_dbs" }, mode: 'copy'
+
+    input:
+    val db_path
+
+    output:
+    path "create_dbs.done"
+
+    script:
+    """
+    set -euo pipefail
+
+    mkdir -p "${db_path}"
+
+    python /app/main.py --create_dbs "${db_path}"
+
+    touch create_dbs.done
+    """
+}
+
 workflow {
     dda_samples_ch = samples_ch.filter { sample_name, input_file, data_format ->
         data_format == 'dda'

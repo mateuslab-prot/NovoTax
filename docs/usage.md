@@ -1,42 +1,48 @@
-# Example usage
+# Running NovoTax
 
-## Quickstart / Demo
-1. Clone the NovoTax repository:
-```bash
-git clone https://github.com/mateuslab-prot/NovoTax/
-```
-2. Move into the repository:
-```bash
-cd NovoTax
-```
-3. Run NovoTax on the example data using the profile that matches your environment
-    - Default (no profile flag): Ubuntu GPU
-    - `-profile apptainer_wsl_gpu`: Apptainer WSL GPU
-    - `-profile docker_gpu`: Docker GPU for Ubuntu/WSL
-```bash
-nextflow run main.nf
-```
-## Retrieving models and databases
+The base command for running NovoTax is `nextflow run mateuslab-prot/novotax`. To control the input, output and models used, the following flags are available:
 
-### Models
-I moved these into the container images but can still explain the different ones available for completion.
+**NCBI datasets** reads your [API key] to increase rate limits and access to their data by reading the `NCBI_API_KEY`environment key. If possible, ensure this exists in your environment with `export NCBI_API_KEY='YOUR_KEY'`, preferably putting it into your `.bashrc`or equivalent.
 
-### Databases
-Zenodo? LFS?
+**Mandatory**  
+`-i / --input` - Path to .tsv file containing your sample inputs, [see **input** section below](#data-preparation)  
+`-o / --output_dir` - Directory that results will be written to  
 
-## Data preparation
+**One time flags**  
+`--create_dbs PATH` - Creates the GTDB genus database locally at your chosen path. The database size is **~20GB** 
+
+**Optional**  
+`--xuanjinovo_model_file PATH` - Path to a XuanjiNovo model file, [see **models** section below](#models)  
+`--cascadia_model_file PATH`- Path to a Cascadia model file, [see **models** section below](#models)  
+`--contaminants` - First filter [cRAP contaminants](https://www.thegpm.org/crap/) (default **OFF**)  
+`--host PATH` - Path to fasta file containing host proteome to filter host related peptides  
+`--ncbi_api_key KEY` - [NCBI API key](https://www.ncbi.nlm.nih.gov/datasets/docs/v2/api/api-keys/) to increase rate limits and access to NCBI servers
+
+
+## Input
 
 NovoTax is made to accept a list of sample names, file paths and data format using a tab separated (.tsv) file. DDA data to be sequenced using XuanjiNovo is required to be in .mgf format while DIA data to be sequenced with Cascadia requires the data to be in .mzML format. We recommend [msconvert](https://proteowizard.sourceforge.io/tools/msconvert.html) to convert raw data into the appropriate formats.
 
 | sample_name     | file_path                                | data_format |
 |-----------------|------------------------------------------|-------------|
-| xuanjinovo_test | /full/path/to/folder/demo_xuanjinovo.mgf | dda         |
-| cascadia_test   | /full/path/to/folder/demo_cascadia.mzML  | dia         |
+| XuanjiNovo_demo | /full/path/to/folder/demo_xuanjinovo.mgf | dda         |
+| Cascadia_demo   | /full/path/to/folder/demo_cascadia.mzML  | dia         |
 
-## Running NovoTax
+## Models
+**XuanjiNovo**: The `XuanjiNovo_130M_massnet_massivekb.ckpt` model finetuned on 30M MassiveKB is included in the XuanjiNovo image. A different model can be used with  `--model_file MODEL_FILE_PATH`.
 
-```bash
-nextflow run novotax --sample-path sample.tsv
-```
+**Cascadia**: The base `Cascadia.ckpt` model is included in the Cascadia image. A different model can be used with `--cascadia_model_file MODEL_FILE_PATH`.
 
+## Databases
+TODO: Update Zenodo / LFS DOIs
+
+## Output
+NovoTax outputs several files during runtime.
+* `$SAMPLE_NAME/$SAMPLE_NAME_cascadia.ssl` - Cascadia predictions.
+* `$SAMPLE_NAME/$SAMPLE_NAME_xuanjinovo.tsv`- XuanjiNovo preditions.
+* `$SAMPLE_NAME/$SAMPLE_NAME_unique_peptides.txt`- All unique peptides predicted, for Unipept or other downstream analysis.
+* `$SAMPLE_NAME/$SAMPLE_NAME_novotax_species.tsv` - GTDB accessions and taxonomy for all species predicted to be in the sample, including a relative score.
+* `$SAMPLE_NAME/$SAMPLE_NAME_database.fasta` - Concatenated fasta file for all species predicted by NovoTax to be in the sample for downstream analysis.
+
+## Tools used in NovoTax
 For a more detailed view on the tools used in NovoTax please refer to the [tools section](tools.md).
