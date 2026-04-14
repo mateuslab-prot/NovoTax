@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import gzip
 import os
+import shutil
 from pathlib import Path
 
 import pandas as pd
@@ -35,12 +36,13 @@ NUMERIC_COLUMNS = [
     "protein_count",
 ]
 
-DOWNLOAD_DIR = Path("gtdb_downloads")
-TMP_PROTEOME_DIR = Path("./tmp")
-COMBINED_METADATA_FILE = Path("gtdb_selected_metadata.tsv")
-SELECTED_REPS_FILE = Path("selected_reps.tsv")
-OUTPUT_FASTA_BASENAME = "selected_reps"
-GTDB_PROTEIN_DIR = Path(
+DOWNLOAD_DIRNAME = "gtdb_downloads"
+TMP_DIRNAME = "tmp"
+COMBINED_METADATA_FILENAME = "gtdb_selected_metadata.tsv"
+SELECTED_REPS_FILENAME = "extended_reps.tsv"
+OUTPUT_FASTA_BASENAME = "extended_genus_reps"
+
+DEFAULT_GTDB_PROTEIN_DIR = Path(
     "/data/dbs/gtdb/release226/proteins/protein_faa_reps/bacteria/"
 )
 
@@ -139,38 +141,59 @@ def build_selected_reps(df: pd.DataFrame) -> pd.DataFrame:
     return selected_reps
 
 
-def download_and_build_selected_rep_database(accessions: list[str]) -> None:
+def download_and_build_selected_rep_database(
+    accessions: list[str],
+    tmp_proteome_dir: Path,
+    output_dir: Path,
+    gtdb_protein_dir: Path,
+) -> None:
     api_key = os.getenv("NCBI_API_KEY")
     downloader = NCBIProteomeDownloader(api_key=api_key)
 
-    TMP_PROTEOME_DIR.mkdir(parents=True, exist_ok=True)
+    tmp_proteome_dir.mkdir(parents=True, exist_ok=True)
 
     downloader.download_proteomes(
         accessions=accessions,
-        out_dir=str(TMP_PROTEOME_DIR),
-        gtdb_dir=str(GTDB_PROTEIN_DIR),
+        out_dir=str(tmp_proteome_dir),
+        gtdb_dir=str(gtdb_protein_dir),
     )
 
+    output_fasta = output_dir / f"{OUTPUT_FASTA_BASENAME}.fasta"
+    output_db = output_dir / OUTPUT_FASTA_BASENAME
+
     process_fasta_folder_to_single(
-        folder=str(TMP_PROTEOME_DIR),
-        output_fasta=f'{OUTPUT_FASTA_BASENAME}.fasta',
+        folder=str(tmp_proteome_dir),
+        output_fasta=str(output_fasta),
         pattern="*.faa",
         line_width=None,
         parallel=False,
     )
 
-    build_mmseqs_db(f"{OUTPUT_FASTA_BASENAME}.fasta", OUTPUT_FASTA_BASENAME)
+    build_mmseqs_db(str(output_fasta), str(output_db))
 
 
-def main() -> None:
-    DOWNLOAD_DIR.mkdir(exist_ok=True)
+def main(
+    output_dir: Path,
+    gtdb_protein_dir: Path = DEFAULT_GTDB_PROTEIN_DIR,
+) -> None:
+    output_dir = Path(output_dir).resolve()
+    gtdb_protein_dir = Path(gtdb_protein_dir).resolve()
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    download_dir = output_dir / DOWNLOAD_DIRNAME
+    tmp_proteome_dir = output_dir / TMP_DIRNAME
+    combined_metadata_file = output_dir / COMBINED_METADATA_FILENAME
+    selected_reps_file = output_dir / SELECTED_REPS_FILENAME
+
+    download_dir.mkdir(exist_ok=True)
 
     all_dfs: list[pd.DataFrame] = []
     downloaded_files: list[Path] = []
 
     try:
         for source_name, url in URLS.items():
-            gz_path = DOWNLOAD_DIR / f"{source_name}_metadata.tsv.gz"
+            gz_path = download_dir / f"{source_name}_metadata.tsv.gz"
 
             print(f"Downloading {source_name}...")
             download_file(url, gz_path)
@@ -184,7 +207,7 @@ def main() -> None:
 
         data[
             COLUMNS_TO_KEEP + ["family", "genus", "species", "source"]
-        ].to_csv(COMBINED_METADATA_FILE, sep="\t", index=False)
+        ].to_csv(combined_metadata_file, sep="\t", index=False)
 
         print(f"Combined rows: {len(data):,}")
         print(
@@ -205,23 +228,32 @@ def main() -> None:
             ["accession", "gtdb_taxonomy", "protein_count", "source"]
         ].rename(columns={"gtdb_taxonomy": "taxonomy"})
 
-        selected_summary.to_csv(SELECTED_REPS_FILE, sep="\t", index=False)
+        selected_summary.to_csv(selected_reps_file, sep="\t", index=False)
 
         print(f"Selected reps: {len(selected_summary):,}")
         print(f"Total protein count: {selected_summary['protein_count'].sum():,}")
-        print(f"Saved: {SELECTED_REPS_FILE}")
+        print(f"Saved: {selected_reps_file}")
 
         accessions = selected_summary["accession"].tolist()
         print(
             f"Downloading/building proteome database for {len(accessions):,} accessions..."
         )
-        download_and_build_selected_rep_database(accessions)
+        download_and_build_selected_rep_database(
+            accessions=accessions,
+            tmp_proteome_dir=tmp_proteome_dir,
+            output_dir=output_dir,
+            gtdb_protein_dir=gtdb_protein_dir,
+        )
 
     finally:
         print("Cleaning up downloaded GTDB metadata files...")
         for path in downloaded_files:
             safe_delete(path)
 
+        if tmp_proteome_dir.exists():
+            print(f"Removing temporary directory: {tmp_proteome_dir}")
+            shutil.rmtree(tmp_proteome_dir)
+
 
 if __name__ == "__main__":
-    main()
+    main(Path("."), DEFAULT_GTDB_PROTEIN_DIR)

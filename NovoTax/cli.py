@@ -21,6 +21,13 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         help="Directory where databases should be created",
     )
+    create_dbs_parser.add_argument(
+        "--gtdb-protein-dir",
+        type=Path,
+        required=False,
+        default=Path("/data/dbs/gtdb/release226/proteins/protein_faa_reps/bacteria/"),
+        help="Path to GTDB protein directory",
+    )
 
     classify_parser = subparsers.add_parser(
         "classify",
@@ -35,23 +42,26 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def run_create_dbs(db_path: Path) -> None:
+def run_create_dbs(db_path: Path, gtdb_protein_dir: Path) -> None:
     from NovoTax.dbs.construct_databases import main as construct_databases_main
 
     db_path = db_path.resolve()
     db_path.mkdir(parents=True, exist_ok=True)
 
-    construct_databases_main(db_path)
+    construct_databases_main(
+        output_dir=db_path,
+        gtdb_protein_dir=gtdb_protein_dir,
+    )
 
 
-# def run_classify(filepath: Path) -> None:
-#     from NovoTax.core.classify import main as classify_main
+def run_classify(filepath: Path) -> None:
+    from NovoTax.core.classify import main as classify_main
 
-#     filepath = filepath.resolve()
-#     if not filepath.exists():
-#         raise FileNotFoundError(f"Input file does not exist: {filepath}")
+    filepath = filepath.resolve()
+    if not filepath.exists():
+        raise FileNotFoundError(f"Input file does not exist: {filepath}")
 
-#     classify_main(filepath)
+    classify_main(filepath)
 
 
 def main() -> None:
@@ -59,9 +69,9 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.command == "create-dbs":
-        run_create_dbs(args.db_path)
-    # elif args.command == "classify":
-    #     run_classify(args.filepath)
+        run_create_dbs(args.db_path, args.gtdb_protein_dir)
+    elif args.command == "classify":
+        run_classify(args.filepath)
     else:
         parser.error(f"Unknown command: {args.command}")
 
