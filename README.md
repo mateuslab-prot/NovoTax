@@ -21,25 +21,13 @@ NovoTax is meant to be practical and accessible:
 - containerized tools for reproducibility
 - designed so non-experts can use it with minimal setup
 
----
-
 ## Pipeline setup
 
-NovoTax uses:
-
-- **Nextflow** to manage the workflow
-- **Docker** to run tools in a reproducible software environment
-- a simple **TSV sample sheet** to define input files
-
-This means users do not need to run long Docker commands manually for each sample.
-
-For more detailed instructions, see:
+For more detailed instructions, please refer to the documentation:
 
 - [`docs/index.md`](docs/index.md)
 - [`docs/installation.md`](docs/installation.md)
 - [`docs/example.md`](docs/example.md)
-
----
 
 ## Quick start
 
@@ -47,96 +35,74 @@ For more detailed instructions, see:
 
 You need:
 
-- **Java**
 - **Nextflow**
-- **Docker**
-- **Docker GPU support**
-- **model checkpoint files**
+- **Apptainer** or **Docker**
 - a **tab-separated sample sheet**
-
----
 
 ### 2. Sample sheet format
 
 Create a tab-separated file like this:
 
-```tsv
-sample_name	file_path	type_of_data
-sample1	/full/path/to/sample1.mgf	dda
-sample2	/full/path/to/sample2.mgf	DDA
-```
-
-Notes:
-- `type_of_data` expects 'DDA' or 'DIA'
-
----
+| sample_name     | file_path                                | data_format |
+|-----------------|------------------------------------------|-------------|
+| XuanjiNovo_demo | /full/path/to/folder/demo_xuanjinovo.mgf | dda         |
+| Cascadia_demo   | /full/path/to/folder/demo_cascadia.mzML  | dia         |
 
 ### 3. Run the pipeline
 
 ```bash
-nextflow run main.nf
+nextflow run mateuslab-prot/novotax
 ```
 
 Or with custom paths:
 
 ```bash
 nextflow run main.nf \
-  --samplesheet /path/to/samples.tsv \
-  --outdir /path/to/results \
+  --input /path/to/samples.tsv \
+  --output_dir /path/to/results \
   --model_file /path/to/model.ckpt
 ```
 
----
-
-## Installation and notes
-
-Detailed setup instructions and practical notes are available in:
-
-- [`docs/index.md`](docs/index.md)
-- [`docs/installation.md`](docs/installation.md)
-- [`docs/example.md`](docs/example.md)
-
-These pages cover installation, configuration, and more detailed usage notes.
-
----
-
 ## Output
 
-The pipeline writes one output folder per sample into the output directory.
-
----
-
-## Resume after a failed run
-
-```bash
-nextflow run main.nf -resume
-```
+NovoTax outputs several files during runtime.
+* `$SAMPLE_NAME/$SAMPLE_NAME_cascadia.ssl` - Cascadia predictions.
+* `$SAMPLE_NAME/$SAMPLE_NAME_xuanjinovo.tsv`- XuanjiNovo preditions.
+* `$SAMPLE_NAME/$SAMPLE_NAME_unique_peptides.txt`- All unique peptides predicted, for [Unipept](https://unipept.ugent.be/) or other downstream analysis.
+* `$SAMPLE_NAME/$SAMPLE_NAME_novotax_species.tsv` - [GTDB](https://gtdb.ecogenomic.org/) accessions and taxonomy for all species predicted to be in the sample, including a relative score.
+* `$SAMPLE_NAME/$SAMPLE_NAME_database.fasta` - Concatenated fasta file for all species predicted by NovoTax to be in the sample for downstream analysis.
 
 
 ## Cite
 
 If you use **NovoTax**, please cite the tools that make this possible:
 
-### NovoTax
+**NovoTax**  
 Svedberg D, Mateus A.  
 *NovoTax: prokaryotic strain identification from mass spectrometry-based proteomics data.*  
 bioRxiv. 2026.  
 DOI: https://doi.org/10.64898/2026.04.02.715787
 
-### Cascadia
+**Cascadia**  
 Sanders J, Wen B, Rudnick PA, et al.  
 *A transformer model for de novo sequencing of data-independent acquisition mass spectrometry data.*  
 Nat Methods. 2025;22:1447–1453.  
 DOI: https://doi.org/10.1038/s41592-025-02718-y
 
-### XuanjiNovo
+**XuanjiNovo**  
 Jun A, Zhang X, et al.  
 *MassNet: billion-scale AI-friendly mass spectral corpus enables robust de novo peptide sequencing.*  
 bioRxiv. 2025.  
 DOI: https://doi.org/10.1101/2025.06.20.660691
 
-### MMseqs2
+**MMseqs2**  
 Steinegger M, Söding J.  
 *MMseqs2 enables sensitive protein sequence searching for the analysis of massive data sets.*  
 Nat Biotechnol. 2017;35:1026–1028.  
 DOI: https://doi.org/10.1038/nbt.3988
+
+**GTDB**  
+Parks, D.H., et al.  
+*GTDB release 10: a complete and systematic taxonomy for 715 230 bacterial and 17 245 archaeal genomes*  
+Nucleic Acids Research, 2025.  
+DOI: https://doi.org/10.1093/nar/gkaf1040

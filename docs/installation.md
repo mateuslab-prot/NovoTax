@@ -12,7 +12,7 @@ To run NovoTax locally, the following tools are needed:
 NovoTax is intended to run on:
 
 - **Windows through WSL2**
-    - To install WSL, follow the guide [official guide](https://learn.microsoft.com/en-us/windows/wsl/install)
+    - To install Windows Subsystem for Linus (WSL), follow the [official guide](https://learn.microsoft.com/en-us/windows/wsl/install)
 - **Ubuntu**
 
 
@@ -101,7 +101,7 @@ apptainer version
 ```
 
 ### Extra WSL step
-If you're on WSL, you will also need to install the nvidia-container-toolkit to utilise the GPU. Start by add libnvidia-container repository to the keyring:
+If you're on WSL, you will also need to install the nvidia-container-toolkit to utilise the GPU. Start by adding the libnvidia-container repository to the keyring:
 ```bash
 curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | \
   sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
@@ -132,51 +132,18 @@ apptainer exec --nvccli docker://nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
 If nvidia-smi shows the systems GPU details the Apptainer installation is working correctly with the systems GPUs. You can move on to [verify the setup](#3-verify-the-environment-with-gpu).
 
 ## 2.2 Docker
-Rootless Docker lets you run Docker without root privileges, improving isolation and security.
-
-GPU access is needed for de novo sequencers by installing the NVIDIA container toolkit. The installation differs depending on your chosen platform. Follow the instructions below for:
+If you prefer to run Docker, or Docker is already installed on your system, this is also supported. Please make sure that your docker installation can access the systems GPUs with:
 ```bash
-docker --version
+docker run --rm --gpus all nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
 ```
+If this works, you can move on to [verify the environment](#3-verify-the-environment-with-gpu)! If this does not work, please refer to the official documentation to make sure that [rootless Docker](https://docs.docker.com/engine/security/rootless/) and the [NVIDA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) is set up correctly.
 
-If not Docker needs to be installed.
-
-Rootless Docker lets you run Docker [**without root privileges**](https://docs.docker.com/engine/security/rootless/), improving isolation and security.  
-
-[GPU access](https://docs.docker.com/compose/how-tos/gpu-support/) is needed for de novo sequencers by installing the [NVIDIA container toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html). The installation differs depending on your chosen platform. Follow the instructions below for:
-- [WSL](#31-wsl)
-- [Ubuntu](#32-ubuntu)
-
-Add libnvidia-container to keyring:
-```bash
-curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | \
-  sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
-```
-
-```bash
-curl -fsSL https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
-  sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
-  sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list >/dev/null
-```
-
-After the addition to the keyring the package can be installed:
-
-```bash
-sudo apt-get update
-sudo apt-get install -y nvidia-container-toolkit
-```
-
-## 3. Verify the environment with GPU
+## 3. Verify the environment with GPU support
 
 Before running NovoTax, make sure the foillowing commands work:
 
 ```bash
 nextflow -version
-```
-
-## If using Docker
-```bash
-docker run --rm --gpus all nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
 ```
 
 ## If using Apptainer
@@ -191,6 +158,36 @@ apptainer exec --nv docker://nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
 apptainer exec --nv --nvccli docker://nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
 ```
 
+## If using Docker
+```bash
+docker run --rm --gpus all nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
+```
+
+
+
+
+## NovoTax demo
+
+If the environment is working correctly, you can run a short demo using example data. Doing this will also download all the containers required to run NovoTax, making subsequent runs quicker to run.
+
+1. Clone the NovoTax repository:
+```bash
+git clone https://github.com/mateuslab-prot/NovoTax/
+```
+2. Move into the repository:
+```bash
+cd NovoTax
+```
+3. Run NovoTax on the example data using the profile that matches your environment
+    - Default (no profile flag): Apptainer on Ubuntu using GPU
+    - `-profile apptainer_wsl_gpu`: Apptainer on WSL using GPU
+    - `-profile docker_gpu`: Docker on Ubuntu/WSL using GPU
+```bash
+nextflow run main.nf
+```
+**Note that the first NovoTax run will take a longer time due to first having to retrieve all the containers. Expect the download to take 10-15 minutes and then the demo files takes roughly ~5 minutes to run on a modern desktop GPU.**
+
+The results will be written to the folder `demo_results/`. For more details on the outputs generated by NovoTax, please read the [output section](example.md#output) of the documentation.
 
 ## Running NovoTax
-If all of these work, you're now ready to run [NovoTax](example.md)!
+You're now ready to run [NovoTax on your own data](example.md)!
