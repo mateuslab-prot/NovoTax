@@ -25,9 +25,10 @@ NovoTax is meant to be practical and accessible:
 
 For more detailed instructions, please refer to the documentation:
 
-- [`docs/index.md`](docs/index.md)
-- [`docs/installation.md`](docs/installation.md)
-- [`docs/example.md`](docs/example.md)
+- [`Intro`](docs/intro.md)
+- [`Installation`](docs/installation.md)
+- [`Usage`](docs/usage.md)
+- [`Example`](docs/example.md)
 
 ## Quick start
 
