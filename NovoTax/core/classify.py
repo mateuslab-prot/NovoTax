@@ -14,9 +14,9 @@ from typing import Iterable
 import numpy as np
 
 from NovoTax.dbs.create_db import build_mmseqs_db, process_fasta_folder_to_single, write_fasta
-from .gtdb import GTDB
-from .mmseqs import get_mmseqs_hits, get_scores
-from .mmseqs_search import mmseqs_easy_search
+from NovoTax.core.gtdb import GTDB
+from NovoTax.core.mmseqs import get_mmseqs_hits, get_scores
+from NovoTax.core.mmseqs_search import mmseqs_easy_search
 from NovoTax.dbs.ncbi import NCBIProteomeDownloader
 
 

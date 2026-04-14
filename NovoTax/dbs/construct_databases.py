@@ -10,8 +10,8 @@ from pathlib import Path
 import pandas as pd
 import requests
 
-from .create_db import build_mmseqs_db, process_fasta_folder_to_single
-from .ncbi import NCBIProteomeDownloader
+from NovoTax.dbs.create_db import build_mmseqs_db, process_fasta_folder_to_single
+from NovoTax.dbs.ncbi import NCBIProteomeDownloader
 
 
 URLS = {
