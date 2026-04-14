@@ -44,7 +44,7 @@ NovoTax is designed to accept a list of sample names, file paths and data format
 **Cascadia**: The base `Cascadia.ckpt` model is included in the Cascadia image. A different model can be used with `--cascadia_model_file MODEL_FILE_PATH`.
 
 ## Output
-NovoTax creates one folder for experiment, creating a folder structure as follows:
+NovoTax creates one folder for each experiment, creating a folder structure as follows:
 ```
 ├── experiment1_dda/                    
 │   ├── file1/                          
