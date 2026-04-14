@@ -13,11 +13,11 @@ from typing import Iterable
 
 import numpy as np
 
-from dbs.create_db import build_mmseqs_db, process_fasta_folder_to_single, write_fasta
-from core.gtdb import GTDB
-from core.mmseqs import get_mmseqs_hits, get_scores
-from core.mmseqs_search import mmseqs_easy_search
-from dbs.ncbi import NCBIProteomeDownloader
+from NovoTax.dbs.create_db import build_mmseqs_db, process_fasta_folder_to_single, write_fasta
+from .gtdb import GTDB
+from .mmseqs import get_mmseqs_hits, get_scores
+from .mmseqs_search import mmseqs_easy_search
+from NovoTax.dbs.ncbi import NCBIProteomeDownloader
 
 
 DATA_ROOT = Path("/home/desv/manuscripts/denovo/data/PXD010000")
@@ -470,7 +470,7 @@ def main() -> None:
 
                 out.write(f"removed_peptides\t{removed}\n")
                 reset_tmp_dirs()
-
+                
 
 if __name__ == "__main__":
     main()
