@@ -193,46 +193,64 @@ process CREATE_NOVOTAX_DBS {
 
     input:
     val db_path
+    val gtdb_protein_dir
+    val genus_rep_dir
 
     output:
     path "create_dbs.done"
 
     script:
+    def gtdbArg     = gtdb_protein_dir ? "--gtdb-protein-dir \"${gtdb_protein_dir}\"" : ""
+    def genusRepArg = genus_rep_dir ? "--genus-rep-dir \"${genus_rep_dir}\"" : ""
+
     """
     set -euo pipefail
 
     mkdir -p "${db_path}"
 
-    python /app/main.py --create_dbs "${db_path}"
+    python -m NovoTax.cli create-dbs "${db_path}" ${gtdbArg} ${genusRepArg}
 
     touch create_dbs.done
     """
 }
 
 workflow {
-    dda_samples_ch = samples_ch.filter { sample_name, input_file, data_format ->
-        data_format == 'dda'
+    if( params.create_dbs != null ) {
+        if( params.gtdb_protein_dir == null ) {
+            error "When using --create_dbs, you must also provide --gtdb_protein_dir"
+        }
+
+        CREATE_NOVOTAX_DBS(
+            Channel.value(params.create_dbs),
+            Channel.value(params.gtdb_protein_dir),
+            Channel.value(params.genus_rep_dir)
+        )
     }
+    else {
+        dda_samples_ch = samples_ch.filter { sample_name, input_file, data_format ->
+            data_format == 'dda'
+        }
 
-    xuanjinovo_results = params.model_file != null
-        ? RUN_XUANJINOVO_WITH_MODEL(
-            dda_samples_ch,
-            Channel.value(file(params.model_file))
-          )
-        : RUN_XUANJINOVO_DEFAULT_MODEL(dda_samples_ch)
+        xuanjinovo_results = params.model_file != null
+            ? RUN_XUANJINOVO_WITH_MODEL(
+                dda_samples_ch,
+                Channel.value(file(params.model_file))
+              )
+            : RUN_XUANJINOVO_DEFAULT_MODEL(dda_samples_ch)
 
-    dia_samples_ch = samples_ch.filter { sample_name, input_file, data_format ->
-        data_format == 'dia'
+        dia_samples_ch = samples_ch.filter { sample_name, input_file, data_format ->
+            data_format == 'dia'
+        }
+
+        cascadia_results = params.cascadia_model_file != null
+            ? RUN_CASCADIA_WITH_MODEL(
+                dia_samples_ch,
+                Channel.value(file(params.cascadia_model_file))
+              )
+            : RUN_CASCADIA_DEFAULT_MODEL(dia_samples_ch)
+
+        all_results = xuanjinovo_results.mix(cascadia_results)
+
+        RUN_NOVOTAX(all_results)
     }
-
-    cascadia_results = params.cascadia_model_file != null
-        ? RUN_CASCADIA_WITH_MODEL(
-            dia_samples_ch,
-            Channel.value(file(params.cascadia_model_file))
-          )
-        : RUN_CASCADIA_DEFAULT_MODEL(dia_samples_ch)
-
-    all_results = xuanjinovo_results.mix(cascadia_results)
-
-    RUN_NOVOTAX(all_results)
 }
