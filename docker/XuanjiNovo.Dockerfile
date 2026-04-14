@@ -1,3 +1,5 @@
+# NOTE: To be ran from the MassNet-DDA repo https://github.com/guomics-lab/MassNet-DDA
+# NOTE: First add the appropriate model file to the repository (XuanjiNovo_130M_massnet_massivekb.ckpt)
 FROM pytorch/pytorch:2.1.0-cuda11.8-cudnn8-runtime
 
 ENV CUDA_HOME=/usr/local/cuda
