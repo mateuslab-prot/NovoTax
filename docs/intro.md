@@ -4,7 +4,7 @@ NovoTax is a pipeline for identifying the **closest prokaryotic strains** presen
 
 ## What NovoTax does
 
-NovoTax is built for cases where you do not already know which organism is present in the sample, or when you want to confirm that the expected strain is actually there.
+NovoTax is built for cases where you do not already know which organism is present in the sample, or when you want to confirm that the expected strain is actually there without contaminations.
 
 With the default workflow, NovoTax:
 
