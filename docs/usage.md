@@ -4,7 +4,10 @@
 
 The base command for running NovoTax is `nextflow run mateuslab-prot/novotax`. To control the input, output and models used, the following flags are available:
 
-**NCBI datasets** reads your [API key] to increase rate limits and access to their data by reading the `NCBI_API_KEY`environment key. If possible, ensure this exists in your environment with `export NCBI_API_KEY='YOUR_KEY'`, preferably putting it into your `.bashrc`or equivalent.
+**NCBI datasets** reads your [API key](https://www.ncbi.nlm.nih.gov/datasets/docs/v2/api/api-keys/) to increase rate limits and access to their data by reading the `NCBI_API_KEY`environment key. If possible, ensure this exists in your environment with `export NCBI_API_KEY='YOUR_KEY'`, preferably putting it into your `.bashrc`or equivalent.
+
+**One time flags**  
+`-create-dbs PATH` - Creates the GTDB genus database locally at your chosen path. The database size is **~20GB**. 
 
 **Profiles**  
 Different profiles exist depending on which system and container platform you're using:  
@@ -15,9 +18,6 @@ Different profiles exist depending on which system and container platform you're
 **Mandatory**  
 `-i / --input` - Path to .tsv file containing your sample inputs, [see **input** section below](#data-preparation).  
 `-o / --output_dir` - Directory that results will be written to.  
-
-**One time flags**  
-`-create-dbs PATH` - Creates the GTDB genus database locally at your chosen path. The database size is **~20GB**. 
 
 **Optional**  
 `--xuanjinovo_model_file PATH` - Path to a XuanjiNovo model file, [see **models** section below](#models).  
