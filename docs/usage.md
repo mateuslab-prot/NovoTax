@@ -6,12 +6,18 @@ The base command for running NovoTax is `nextflow run mateuslab-prot/novotax`. T
 
 **NCBI datasets** reads your [API key] to increase rate limits and access to their data by reading the `NCBI_API_KEY`environment key. If possible, ensure this exists in your environment with `export NCBI_API_KEY='YOUR_KEY'`, preferably putting it into your `.bashrc`or equivalent.
 
+**Profiles**  
+Different profiles exist depending on which system and container platform you're using:  
+`-profile apptainer_gpu` **(default)**: Apptainer on Ubuntu using GPU.  
+`-profile apptainer_wsl_gpu`: Apptainer on WSL using GPU.  
+`-profile docker_gpu`: Docker on Ubuntu/WSL using GPU.
+
 **Mandatory**  
-`-i / --input` - Path to .tsv file containing your sample inputs, [see **input** section below](#data-preparation)  
-`-o / --output_dir` - Directory that results will be written to  
+`-i / --input` - Path to .tsv file containing your sample inputs, [see **input** section below](#data-preparation).  
+`-o / --output_dir` - Directory that results will be written to.  
 
 **One time flags**  
-`--create-dbs PATH` - Creates the GTDB genus database locally at your chosen path. The database size is **~20GB** 
+`-create-dbs PATH` - Creates the GTDB genus database locally at your chosen path. The database size is **~20GB**. 
 
 **Optional**  
 `--xuanjinovo_model_file PATH` - Path to a XuanjiNovo model file, [see **models** section below](#models).  
@@ -27,15 +33,10 @@ The base command for running NovoTax is `nextflow run mateuslab-prot/novotax`. T
 
 NovoTax is designed to accept a list of sample names, file paths and data format using a tab separated (.tsv) file. DDA data to be sequenced using XuanjiNovo is required to be in .mgf format while DIA data to be sequenced with Cascadia requires the data to be in .mzML format. We recommend [msconvert](https://proteowizard.sourceforge.io/tools/msconvert.html) to convert raw data into the appropriate formats.
 
-**Include experiment_name before sample_name**
-**Check for uniqueness in files**
-
 | experiment_name     | file_path                                | data_format |
 |-----------------|------------------------------------------|-------------|
 | XuanjiNovo_demo | /full/path/to/folder/demo_xuanjinovo.mgf | dda         |
 | Cascadia_demo   | /full/path/to/folder/demo_cascadia.mzML  | dia         |
-
-**Use file_name instaed of sample_name downstream**
 
 ## Models
 **XuanjiNovo**: The `XuanjiNovo_130M_massnet_massivekb.ckpt` model finetuned on 30M MassiveKB is included in the XuanjiNovo image. A different model can be used with  `--model_file MODEL_FILE_PATH`.

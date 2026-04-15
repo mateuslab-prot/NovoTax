@@ -1,27 +1,26 @@
 # Installation
 
-NovoTax runs as a **Nextflow** pipeline and uses modular **containers** for its software environment.
+NovoTax runs as a [**Nextflow**]((https://www.nextflow.io)) pipeline and uses modular **container images** for its software environment.
 
 To run NovoTax locally, the following tools are needed:
 
 - [**Nextflow**](https://www.nextflow.io)
-- [**Docker**](https://www.docker.com) or [**Apptainer**](https://apptainer.org)
+- [**Apptainer**](https://apptainer.org) or [**Docker**](https://www.docker.com)
 
 ## Supported environment
 
 NovoTax is intended to run on:
 
 - **Windows through WSL2**
-    - To install Windows Subsystem for Linus (WSL), follow the [official guide](https://learn.microsoft.com/en-us/windows/wsl/install)
+    - To install Windows Subsystem for Linus (WSL), please follow the [official guide](https://learn.microsoft.com/en-us/windows/wsl/install)
 - **Ubuntu**
 
 
-macOS is not supported due to hardware limitations for the de novo sequencers.
+macOS is not supported due to hardware limitations for de novo sequencers.
 
 ## 0. System preparation
 
-Ensure that all package channels are up-to-date
-
+Ensure that all package channels are up-to-date:
 ```bash
 sudo apt update
 ```
@@ -41,29 +40,25 @@ Nextflow requires Java 17 (or later, up to 26). Check which version of Java you 
 ```bash
 java -version
 ```
-
-If you don't have a compatible version of Java installed, it is recommended that you install it through SDKMAN.
-
-1. If needed, install Java 17 or newer using your system package manager or a JDK distribution of your choice. For example, using
+If needed, install Java 17 or newer using your system package manager or a JDK distribution of your choice. For example, using:
 ```bash
 sudo apt install -y openjdk-17-jre-headless
 ```
-2. Confirm Java is installed correctly:
+Confirm Java is installed correctly:
 ```bash
 java -version
 ```
 
 ### Install Nextflow
-1. Download Nextflow:
+Download Nextflow:
 ```bash
 curl -s https://get.nextflow.io | bash
 ```
-2. Make Nextflow executable:
+Make Nextflow executable:
 ```bash
 chmod +x nextflow
 ```
-
-3. Move Nextflow into an executable path. For example:
+Move Nextflow into an executable path. For example:
 ```bash
 sudo mv nextflow /usr/local/bin/
 ```
@@ -76,7 +71,7 @@ nextflow -version
 
 ## 2. Container platform
 
-NovoTax utilises containerisation for reproducability and modularity. There's two main container platforms supported, Apptainer and Docker. If Docker is already installed and working (`docker --version`) we recommend continuing using that. If this is the first time you use containers or work in an HPC environment we instead recommend Apptainer due to easier installation and usage.
+NovoTax utilises containerisation for reproducability and modularity. There's two main container platforms supported, Apptainer and Docker. If Docker is already installed [and working](#22-docker) we recommend continuing using that. If this is the first time you use containers or work in an HPC environment we instead recommend Apptainer due to easier installation and usage.
 
 ## 2.1 Apptainer
 
@@ -163,15 +158,26 @@ apptainer exec --nv --nvccli docker://nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia
 docker run --rm --gpus all nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
 ```
 
-
-
-
 ## 4. Setting up NovoTax
 
-### Database building !DOWNLOAD DB HERE! Refer to r226 since benchmarking
-NovoTax requires GTDB *etc* 
+### Genus database
+NovoTax uses [**GTDB**](https://gtdb.ecogenomic.org) as the database for proteomes and phylogenetic information. To run NovoTax, this database first needs to be prepared. Then, the path to the database is supplied with the `--gtdb_dir PATH` flag.
 
-### Test with example data
+It's available as a downloadable compressed database, or if you prefer, it can be constructed from scratch.
+
+### Downloading the genus database
+To download the genus database, simply download the compressed database, for example with:
+```bash
+wget *LINK_TO_UPDATED_ZENODO_OR_GIT*
+```
+
+### Building the genus database
+The database can also be built from scratch using GTDB data. This can be useful if you for example want to use a different [**GTDB release**](https://gtdb.ecogenomic.org/stats/r232).
+```bash
+nextflow run mateuslab-prot/novotax -create-dbs PATH
+```
+
+## 5. Test with example data
 If the environment is working correctly, you can run a short demo using example data. Doing this will also download all the containers required to run NovoTax, making subsequent runs quicker to run.
 
 1. Clone the NovoTax repository:
@@ -187,7 +193,7 @@ cd NovoTax
     - `-profile apptainer_wsl_gpu`: Apptainer on WSL using GPU
     - `-profile docker_gpu`: Docker on Ubuntu/WSL using GPU
 ```bash
-nextflow run main.nf
+nextflow run main.nf -profile apptainer_wsl_gpu --gtdb_dir PATH
 ```
 **Note that the first NovoTax run will take a longer time due to first having to retrieve all the containers. Expect the download to take 10-15 minutes and then the demo files takes roughly ~5 minutes to run on a modern desktop GPU.**
 
