@@ -110,7 +110,6 @@ def build_runtime_paths(output_dir: Path, sample_name: str, input_file: Path) ->
     peptides_path = sample_output_dir / f"{sample_name}_peptides.txt"
     strains_fasta_path = sample_output_dir / f"{sample_name}_strains.fasta"
     genus_plot_path = sample_output_dir / f"{sample_name}_genus_scores.png"
-    mmseqs_results_dir = sample_output_dir / "mmseqs_results"
 
     cache_root = Path("/tmp/novotax_cache")
     fasta_cache_dir = cache_root / "fastas" / "db_cache"
@@ -124,10 +123,10 @@ def build_runtime_paths(output_dir: Path, sample_name: str, input_file: Path) ->
     tmp_species_fasta_dir = work_dir / "downloads" / "species"
     tmp_mmseqs_dir = work_dir / "mmseqs_tmp"
     tmp_strain_fetch_dir = work_dir / "downloads" / "strain_fetch"
+    mmseqs_results_dir = work_dir / "mmseqs_results"
 
     for folder in (
         sample_output_dir,
-        mmseqs_results_dir,
         fasta_cache_dir,
         db_cache_dir,
         strain_fasta_cache_dir,
@@ -153,6 +152,10 @@ def build_runtime_paths(output_dir: Path, sample_name: str, input_file: Path) ->
         db_cache_dir=db_cache_dir,
         strain_fasta_cache_dir=strain_fasta_cache_dir,
     )
+
+
+def cleanup_work_dir(paths: RuntimePaths) -> None:
+    shutil.rmtree(paths.work_dir, ignore_errors=True)
 
 
 def clean_prediction(sequence: str) -> str:
@@ -317,7 +320,7 @@ def write_genus_score_plot(
 ) -> None:
     ensure_parent(output_path)
 
-    plt.figure(figsize=(8, 4.5))
+    plt.figure(figsize=(10, 5.5))
 
     if not score_points:
         plt.text(0.5, 0.5, "No genus scores to plot", ha="center", va="center")
@@ -329,22 +332,24 @@ def write_genus_score_plot(
         plt.plot(x, y, linestyle=":", marker="o")
         plt.axhline(threshold, linestyle="--", linewidth=1)
 
-        if not score_points[-1][2]:
+        for xi, yi, (label, _, accepted) in zip(x, y, score_points):
+            suffix = "" if accepted else " (filtered)"
             plt.annotate(
-                "filtered",
-                xy=(x[-1], y[-1]),
-                xytext=(5, 5),
+                f"{label}{suffix}",
+                xy=(xi, yi),
+                xytext=(6, 4),
                 textcoords="offset points",
+                fontsize=8,
             )
 
         plt.yscale("log")
         plt.xlabel("Iteration")
         plt.ylabel("Genus score")
-        plt.title("Genus scores across accepted strains and stopping point")
+        plt.title("Genus scores for found strains")
         plt.xticks(x)
 
     plt.tight_layout()
-    plt.savefig(output_path, dpi=200)
+    plt.savefig(output_path, dpi=300)
     plt.close()
 
 def write_query_fasta(
@@ -671,205 +676,209 @@ def main(
     paths = build_runtime_paths(output_dir, sample_name, filepath)
     reset_tmp_dirs(paths)
 
-    data_format, reader = get_reader_for_file(filepath)
-    print(f"Detected input format: {data_format}")
+    try:
+        data_format, reader = get_reader_for_file(filepath)
+        print(f"Detected input format: {data_format}")
 
-    gtdb = GTDB()
-    downloader = NCBIProteomeDownloader(api_key=ncbi_api_key)
+        gtdb = GTDB()
+        downloader = NCBIProteomeDownloader(api_key=ncbi_api_key)
 
-    peptides = reader(filepath, DEFAULT_SCORE_THRESHOLD)
+        peptides = reader(filepath, DEFAULT_SCORE_THRESHOLD)
 
-    host_db: Path | None = None
-    if filter_host is not None:
-        host_db = ensure_host_db(filter_host.resolve(), paths)
+        host_db: Path | None = None
+        if filter_host is not None:
+            host_db = ensure_host_db(filter_host.resolve(), paths)
 
-    found_strain_accessions: list[str] = []
-    genus_score_points: list[tuple[str, float, bool]] = []
+        found_strain_accessions: list[str] = []
+        genus_score_points: list[tuple[str, float, bool]] = []
 
-    with paths.result_path.open("w") as out:
-        out.write(f"sample\t{sample_name}\n")
-        out.write(f"input_file\t{filepath}\n")
-        out.write(f"data_format\t{data_format}\n")
-        out.write(f"peptides\t{len(peptides)}\n")
-        out.write(f"filter_contaminants\t{filter_contaminants}\n")
-        out.write(f"filter_host\t{filter_host if filter_host is not None else 'NONE'}\n")
-        out.write(f"genus_score_threshold\t{genus_score}\n")
-        out.write(f"max_iterations\t{max_iterations}\n")
-        out.write(f"max_strains\t{max_strains}\n")
+        with paths.result_path.open("w") as out:
+            out.write(f"sample\t{sample_name}\n")
+            out.write(f"input_file\t{filepath}\n")
+            out.write(f"data_format\t{data_format}\n")
+            out.write(f"peptides\t{len(peptides)}\n")
+            out.write(f"filter_contaminants\t{filter_contaminants}\n")
+            out.write(f"filter_host\t{filter_host if filter_host is not None else 'NONE'}\n")
+            out.write(f"genus_score_threshold\t{genus_score}\n")
+            out.write(f"max_iterations\t{max_iterations}\n")
+            out.write(f"max_strains\t{max_strains}\n")
 
-        print(f"\nWorking on {sample_name}")
-        print(f"*** Found {len(peptides)} unique peptides ***")
+            print(f"\nWorking on {sample_name}")
+            print(f"*** Found {len(peptides)} unique peptides ***")
 
-        if filter_contaminants and peptides:
-            filter_against_db(
-                peptides,
-                sample_name,
-                paths.peptide_fasta_dir,
-                paths.mmseqs_results_dir,
-                paths.tmp_mmseqs_dir,
-                label="cRAP",
-                target_db=CRAP_DB,
-            )
+            if filter_contaminants and peptides:
+                filter_against_db(
+                    peptides,
+                    sample_name,
+                    paths.peptide_fasta_dir,
+                    paths.mmseqs_results_dir,
+                    paths.tmp_mmseqs_dir,
+                    label="cRAP",
+                    target_db=CRAP_DB,
+                )
 
-        if host_db is not None and peptides:
-            filter_against_db(
-                peptides,
-                sample_name,
-                paths.peptide_fasta_dir,
-                paths.mmseqs_results_dir,
-                paths.tmp_mmseqs_dir,
-                label="host",
-                target_db=host_db,
-            )
+            if host_db is not None and peptides:
+                filter_against_db(
+                    peptides,
+                    sample_name,
+                    paths.peptide_fasta_dir,
+                    paths.mmseqs_results_dir,
+                    paths.tmp_mmseqs_dir,
+                    label="host",
+                    target_db=host_db,
+                )
 
-        write_peptide_list(peptides, paths.peptides_path)
+            write_peptide_list(peptides, paths.peptides_path)
 
-        if not peptides:
-            out.write("No peptides remaining after one-time filtering, end of search\n")
-        else:
-            genus_query_fasta = write_query_fasta(
-                peptides,
-                sample_name,
-                paths.peptide_fasta_dir,
-                suffix="peptides_for_genus_base",
-                reverse=True,
-            )
-            genus_base_result_file = paths.mmseqs_results_dir / f"{sample_name}_genus_base.m8"
-
-            print("*** Searching MMseqs2 genus DB once ***")
-            run_mmseqs_search(
-                genus_query_fasta,
-                SELECTED_REPS_DB,
-                genus_base_result_file,
-                tmp_dir=paths.tmp_mmseqs_dir,
-            )
-
-            base_genus_result = score_result_file(genus_base_result_file)
-            if base_genus_result is None:
-                print("No genus matches found!")
-                out.write("No genus matches, end of search\n")
+            if not peptides:
+                out.write("No peptides remaining after one-time filtering, end of search\n")
             else:
-                for iteration in range(1, max_iterations + 1):
-                    print(f"\n=== Iteration {iteration}/{max_iterations} ===")
+                genus_query_fasta = write_query_fasta(
+                    peptides,
+                    sample_name,
+                    paths.peptide_fasta_dir,
+                    suffix="peptides_for_genus_base",
+                    reverse=True,
+                )
+                genus_base_result_file = paths.mmseqs_results_dir / f"{sample_name}_genus_base.m8"
 
-                    if not peptides:
-                        out.write("No peptides remaining, end of search\n")
-                        break
+                print("*** Searching MMseqs2 genus DB once ***")
+                run_mmseqs_search(
+                    genus_query_fasta,
+                    SELECTED_REPS_DB,
+                    genus_base_result_file,
+                    tmp_dir=paths.tmp_mmseqs_dir,
+                )
 
-                    current_genus_result = score_cached_result_for_peptides(
-                        source_result_file=genus_base_result_file,
-                        allowed_peptides=peptides.keys(),
-                        subset_result_file=(
-                            paths.mmseqs_results_dir
-                            / f"{sample_name}_iter{iteration}_genus_subset.m8"
-                        ),
-                    )
-                    if current_genus_result is None:
-                        print("No remaining genus matches found!")
-                        out.write("No remaining genus matches, end of search\n")
-                        break
+                base_genus_result = score_result_file(genus_base_result_file)
+                if base_genus_result is None:
+                    print("No genus matches found!")
+                    out.write("No genus matches, end of search\n")
+                else:
+                    for iteration in range(1, max_iterations + 1):
+                        print(f"\n=== Iteration {iteration}/{max_iterations} ===")
 
-                    report_search("genus", current_genus_result, out)
+                        if not peptides:
+                            out.write("No peptides remaining, end of search\n")
+                            break
 
-                    if current_genus_result.best_score < genus_score:
+                        current_genus_result = score_cached_result_for_peptides(
+                            source_result_file=genus_base_result_file,
+                            allowed_peptides=peptides.keys(),
+                            subset_result_file=(
+                                paths.mmseqs_results_dir
+                                / f"{sample_name}_iter{iteration}_genus_subset.m8"
+                            ),
+                        )
+                        if current_genus_result is None:
+                            print("No remaining genus matches found!")
+                            out.write("No remaining genus matches, end of search\n")
+                            break
+
+                        report_search("genus", current_genus_result, out)
+
+                        if current_genus_result.best_score < genus_score:
+                            genus_score_points.append(
+                                (
+                                    current_genus_result.best_accession,
+                                    current_genus_result.best_score,
+                                    False,
+                                )
+                            )
+                            message = (
+                                f"Best genus score {current_genus_result.best_score} below threshold "
+                                f"{genus_score}, end of search\n"
+                            )
+                            print(message.strip())
+                            out.write(message)
+                            break
+
+                        best_hit_family = gtdb.metadata.loc[
+                            current_genus_result.best_accession,
+                            "family",
+                        ]
+                        family_db = ensure_family_db(gtdb, downloader, best_hit_family, paths)
+
+                        iteration_query_fasta = write_query_fasta(
+                            peptides,
+                            sample_name,
+                            paths.peptide_fasta_dir,
+                            suffix=f"peptides_iter_{iteration}",
+                            reverse=True,
+                        )
+
+                        print("\n*** Searching MMseqs2 family DB ***")
+                        family_result = search_and_score(
+                            iteration_query_fasta,
+                            family_db,
+                            (
+                                paths.mmseqs_results_dir
+                                / f"{sample_name}_iter{iteration}_{best_hit_family}_family.m8"
+                            ),
+                            tmp_dir=paths.tmp_mmseqs_dir,
+                        )
+                        if family_result is None:
+                            print("No family matches found!")
+                            out.write("No family matches, end of search\n")
+                            break
+
+                        report_search("family", family_result, out)
+
+                        best_hit_species = family_result.best_accession
+                        species_db = ensure_species_db(
+                            gtdb,
+                            downloader,
+                            best_hit_species,
+                            max_strains,
+                            paths,
+                        )
+
+                        print("\n*** Searching MMseqs2 strain DB ***")
+                        strain_result = search_and_score(
+                            iteration_query_fasta,
+                            species_db,
+                            paths.mmseqs_results_dir / f"{sample_name}_iter{iteration}_{best_hit_species}.m8",
+                            tmp_dir=paths.tmp_mmseqs_dir,
+                        )
+                        if strain_result is None:
+                            print("No strain matches found!")
+                            out.write("No strain matches, end of search\n")
+                            break
+
+                        report_search("strain", strain_result, out)
+
+                        found_strain_accessions.append(strain_result.best_accession)
                         genus_score_points.append(
                             (
-                                current_genus_result.best_accession,
+                                strain_result.best_accession,
                                 current_genus_result.best_score,
-                                False,
+                                True,
                             )
                         )
-                        message = (
-                            f"Best genus score {current_genus_result.best_score} below threshold "
-                            f"{genus_score}, end of search\n"
+
+                        removed = remove_best_hit_peptides(
+                            peptides,
+                            strain_result.result_file,
+                            strain_result.best_accession,
                         )
+                        print(
+                            f"Removing {removed} peptides from peptide list that hit "
+                            f"{strain_result.best_accession}"
+                        )
+                        print(f"{len(peptides)} remain")
+
+                        out.write(f"iteration\t{iteration}\n")
+                        out.write(f"removed_peptides\t{removed}\n")
+
+                        reset_tmp_dirs(paths)
+
+                    else:
+                        message = f"Reached max_iterations={max_iterations}, end of search\n"
                         print(message.strip())
                         out.write(message)
-                        break
 
-                    best_hit_family = gtdb.metadata.loc[
-                        current_genus_result.best_accession,
-                        "family",
-                    ]
-                    family_db = ensure_family_db(gtdb, downloader, best_hit_family, paths)
+        write_concatenated_strains_fasta(found_strain_accessions, downloader, paths)
+        write_genus_score_plot(genus_score_points, genus_score, paths.genus_plot_path)
 
-                    iteration_query_fasta = write_query_fasta(
-                        peptides,
-                        sample_name,
-                        paths.peptide_fasta_dir,
-                        suffix=f"peptides_iter_{iteration}",
-                        reverse=True,
-                    )
-
-                    print("\n*** Searching MMseqs2 family DB ***")
-                    family_result = search_and_score(
-                        iteration_query_fasta,
-                        family_db,
-                        (
-                            paths.mmseqs_results_dir
-                            / f"{sample_name}_iter{iteration}_{best_hit_family}_family.m8"
-                        ),
-                        tmp_dir=paths.tmp_mmseqs_dir,
-                    )
-                    if family_result is None:
-                        print("No family matches found!")
-                        out.write("No family matches, end of search\n")
-                        break
-
-                    report_search("family", family_result, out)
-
-                    best_hit_species = family_result.best_accession
-                    species_db = ensure_species_db(
-                        gtdb,
-                        downloader,
-                        best_hit_species,
-                        max_strains,
-                        paths,
-                    )
-
-                    print("\n*** Searching MMseqs2 strain DB ***")
-                    strain_result = search_and_score(
-                        iteration_query_fasta,
-                        species_db,
-                        paths.mmseqs_results_dir / f"{sample_name}_iter{iteration}_{best_hit_species}.m8",
-                        tmp_dir=paths.tmp_mmseqs_dir,
-                    )
-                    if strain_result is None:
-                        print("No strain matches found!")
-                        out.write("No strain matches, end of search\n")
-                        break
-
-                    report_search("strain", strain_result, out)
-
-                    found_strain_accessions.append(strain_result.best_accession)
-                    genus_score_points.append(
-                        (
-                            strain_result.best_accession,
-                            current_genus_result.best_score,
-                            True,
-                        )
-                    )
-
-                    removed = remove_best_hit_peptides(
-                        peptides,
-                        strain_result.result_file,
-                        strain_result.best_accession,
-                    )
-                    print(
-                        f"Removing {removed} peptides from peptide list that hit "
-                        f"{strain_result.best_accession}"
-                    )
-                    print(f"{len(peptides)} remain")
-
-                    out.write(f"iteration\t{iteration}\n")
-                    out.write(f"removed_peptides\t{removed}\n")
-
-                    reset_tmp_dirs(paths)
-
-                else:
-                    message = f"Reached max_iterations={max_iterations}, end of search\n"
-                    print(message.strip())
-                    out.write(message)
-
-    write_concatenated_strains_fasta(found_strain_accessions, downloader, paths)
-    write_genus_score_plot(genus_score_points, genus_score, paths.genus_plot_path)
+    finally:
+        cleanup_work_dir(paths)

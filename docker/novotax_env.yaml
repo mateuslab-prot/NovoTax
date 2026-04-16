@@ -9,3 +9,5 @@ dependencies:
   - tqdm=4.67.1
   - mmseqs2=18.8cc5c
   - ncbi-datasets-cli=18.23.0
+  - matplotlib=3.9.1
+  
