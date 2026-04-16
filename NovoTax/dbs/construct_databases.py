@@ -264,4 +264,4 @@ def main(
 
 
 if __name__ == "__main__":
-    main(Path("."), DEFAULT_GTDB_PROTEIN_DIR)
+    main(Path("output_folder"), DEFAULT_GTDB_PROTEIN_DIR)
