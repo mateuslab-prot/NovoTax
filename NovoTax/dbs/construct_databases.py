@@ -31,7 +31,7 @@ NUMERIC_COLUMNS = [
     "protein_count",
 ]
 
-DOWNLOAD_DIRNAME = "gtdb_downloads"
+DOWNLOAD_DIRNAME = "tmp"
 TMP_DIRNAME = "tmp"
 
 DEFAULT_GTDB_RELEASE = 226
