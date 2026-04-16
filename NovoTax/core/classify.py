@@ -61,6 +61,8 @@ class RuntimePaths:
     fasta_cache_dir: Path
     db_cache_dir: Path
     strain_fasta_cache_dir: Path
+    cached_genus_results_dir: Path
+    genus_base_result_file: Path
 
 
 def decoy_pvalue(
@@ -115,6 +117,7 @@ def build_runtime_paths(output_dir: Path, sample_name: str, input_file: Path) ->
     fasta_cache_dir = cache_root / "fastas" / "db_cache"
     db_cache_dir = cache_root / "mmseqs_dbs" / "dynamic"
     strain_fasta_cache_dir = cache_root / "fastas" / "strain_cache"
+    cached_genus_results_dir = cache_root / "mmseqs_results" / "genus_base"
 
     token = hashlib.sha1(str(input_file.resolve()).encode("utf-8")).hexdigest()[:10]
     work_dir = Path("/tmp/novotax_work") / f"{sample_name}_{token}"
@@ -125,11 +128,14 @@ def build_runtime_paths(output_dir: Path, sample_name: str, input_file: Path) ->
     tmp_strain_fetch_dir = work_dir / "downloads" / "strain_fetch"
     mmseqs_results_dir = work_dir / "mmseqs_results"
 
+    genus_base_result_file = cached_genus_results_dir / f"{sample_name}_{token}_genus_base.m8"
+
     for folder in (
         sample_output_dir,
         fasta_cache_dir,
         db_cache_dir,
         strain_fasta_cache_dir,
+        cached_genus_results_dir,
     ):
         folder.mkdir(parents=True, exist_ok=True)
 
@@ -151,6 +157,8 @@ def build_runtime_paths(output_dir: Path, sample_name: str, input_file: Path) ->
         fasta_cache_dir=fasta_cache_dir,
         db_cache_dir=db_cache_dir,
         strain_fasta_cache_dir=strain_fasta_cache_dir,
+        cached_genus_results_dir=cached_genus_results_dir,
+        genus_base_result_file=genus_base_result_file,
     )
 
 
@@ -740,17 +748,17 @@ def main(
                     suffix="peptides_for_genus_base",
                     reverse=True,
                 )
-                genus_base_result_file = paths.mmseqs_results_dir / f"{sample_name}_genus_base.m8"
-
+                
                 print("*** Searching MMseqs2 genus DB once ***")
                 run_mmseqs_search(
                     genus_query_fasta,
                     SELECTED_REPS_DB,
-                    genus_base_result_file,
+                    paths.genus_base_result_file,
                     tmp_dir=paths.tmp_mmseqs_dir,
                 )
 
-                base_genus_result = score_result_file(genus_base_result_file)
+                base_genus_result = score_result_file(paths.genus_base_result_file)
+                
                 if base_genus_result is None:
                     print("No genus matches found!")
                     out.write("No genus matches, end of search\n")
@@ -763,7 +771,7 @@ def main(
                             break
 
                         current_genus_result = score_cached_result_for_peptides(
-                            source_result_file=genus_base_result_file,
+                            source_result_file=paths.genus_base_result_file,
                             allowed_peptides=peptides.keys(),
                             subset_result_file=(
                                 paths.mmseqs_results_dir
