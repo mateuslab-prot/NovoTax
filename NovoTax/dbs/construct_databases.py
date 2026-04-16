@@ -200,6 +200,8 @@ def download_and_build_selected_rep_database(
     )
 
     build_mmseqs_db(str(output_fasta), str(output_db))
+    
+    safe_delete(output_fasta)
 
 
 def main(
