@@ -498,9 +498,7 @@ def search_and_score(
 
 def report_search(label: str, result: SearchResult, out) -> None:
     print(
-        f"Best {label} hit {result.best_accession} had score {result.best_score}, "
-        f"empirical p value {result.p_value} "
-        f"(mean decoy score {result.decoy_mean}, max {result.decoy_max})"
+        f"Best {label} hit {result.best_accession} had score {result.best_score}"
     )
     print("Top 10 hits:")
 
