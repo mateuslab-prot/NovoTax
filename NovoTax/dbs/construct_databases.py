@@ -228,41 +228,41 @@ def main(
         data[COLUMNS_TO_KEEP].to_csv(filtered_metadata_file, sep="\t", index=False)
         print(f"Saved filtered GTDB metadata: {filtered_metadata_file}")
 
-        data = add_taxonomy_columns(data)
+        # data = add_taxonomy_columns(data)
 
-        print(f"Combined rows: {len(data):,}")
-        print(
-            f"GTDB species representatives available: "
-            f"{(data['gtdb_representative'] == 't').sum():,}"
-        )
+        # print(f"Combined rows: {len(data):,}")
+        # print(
+        #     f"GTDB species representatives available: "
+        #     f"{(data['gtdb_representative'] == 't').sum():,}"
+        # )
 
-        selected_reps = build_selected_reps(data)
+        # selected_reps = build_selected_reps(data)
 
-        selected_family_count = selected_reps["family"].dropna().nunique()
-        all_family_count = data["family"].dropna().nunique()
-        print(
-            f"Families covered by selected reps: "
-            f"{selected_family_count:,} / {all_family_count:,}"
-        )
+        # selected_family_count = selected_reps["family"].dropna().nunique()
+        # all_family_count = data["family"].dropna().nunique()
+        # print(
+        #     f"Families covered by selected reps: "
+        #     f"{selected_family_count:,} / {all_family_count:,}"
+        # )
 
-        selected_summary = selected_reps[
-            ["accession", "gtdb_taxonomy", "protein_count", "source"]
-        ]
+        # selected_summary = selected_reps[
+        #     ["accession", "gtdb_taxonomy", "protein_count", "source"]
+        # ]
 
-        print(f"Selected reps: {len(selected_summary):,}")
-        print(f"Total protein count: {selected_summary['protein_count'].sum():,}")
+        # print(f"Selected reps: {len(selected_summary):,}")
+        # print(f"Total protein count: {selected_summary['protein_count'].sum():,}")
 
-        accessions = selected_summary["accession"].tolist()
-        print(
-            f"Downloading/building proteome database for {len(accessions):,} accessions..."
-        )
-        download_and_build_selected_rep_database(
-            accessions=accessions,
-            tmp_proteome_dir=tmp_proteome_dir,
-            output_dir=output_dir,
-            gtdb_protein_dir=gtdb_protein_dir,
-            gtdb_release=gtdb_release,
-        )
+        # accessions = selected_summary["accession"].tolist()
+        # print(
+        #     f"Downloading/building proteome database for {len(accessions):,} accessions..."
+        # )
+        # download_and_build_selected_rep_database(
+        #     accessions=accessions,
+        #     tmp_proteome_dir=tmp_proteome_dir,
+        #     output_dir=output_dir,
+        #     gtdb_protein_dir=gtdb_protein_dir,
+        #     gtdb_release=gtdb_release,
+        # )
 
     finally:
         print("Cleaning up downloaded GTDB metadata files...")
