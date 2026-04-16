@@ -4,9 +4,9 @@ def createDbsPath = params.create_dbs != null
     ? new File(params.create_dbs.toString()).absolutePath
     : null
 
-def gtdbProteinDirPath = params.gtdb_protein_dir != null
-    ? new File(params.gtdb_protein_dir.toString()).absolutePath
-    : ''
+def gtdbProteinRepDirPath = params.gtdb_protein_rep_dir != null
+    ? new File(params.gtdb_protein_rep_dir.toString()).absolutePath
+    : null
 
 if( params.create_dbs != null ) {
     def createDbsTarget = new File(createDbsPath)
@@ -15,8 +15,23 @@ if( params.create_dbs != null ) {
         error "--create_dbs must point to a directory path, not a file: ${params.create_dbs}"
     }
 
-    if( params.gtdb_protein_dir != null && !file(params.gtdb_protein_dir).exists() ) {
-        error "GTDB protein directory not found: ${params.gtdb_protein_dir}"
+    if( params.gtdb_protein_rep_dir == null ) {
+        error "When running --create_dbs, you must provide --gtdb_protein_rep_dir"
+    }
+
+    def gtdbProteinRepDir = new File(gtdbProteinRepDirPath)
+
+    if( !gtdbProteinRepDir.exists() ) {
+        error "GTDB protein representative directory not found: ${params.gtdb_protein_rep_dir}"
+    }
+
+    if( !gtdbProteinRepDir.isDirectory() ) {
+        error "GTDB protein representative path is not a directory: ${params.gtdb_protein_rep_dir}"
+    }
+
+    def gtdbProteinRepDirContents = gtdbProteinRepDir.list()
+    if( gtdbProteinRepDirContents == null || gtdbProteinRepDirContents.length == 0 ) {
+        error "GTDB protein representative directory is empty: ${params.gtdb_protein_rep_dir}"
     }
 }
 else {
@@ -240,28 +255,33 @@ process RUN_NOVOTAX {
 process CREATE_NOVOTAX_DBS {
     tag "create_dbs"
 
+    publishDir { params.create_dbs }, mode: 'copy', overwrite: true
+
     input:
-    val db_path
     val gtdb_release
-    val gtdb_protein_dir
+    path gtdb_protein_rep_dir
+
+    output:
+    path("GTDB_r${gtdb_release}_filtered_metadata.tsv")
+    path("GTDB_r${gtdb_release}_extended_genus_reps*")
 
     script:
-    def releaseArg = "--gtdb-release ${gtdb_release}"
-    def gtdbArg = gtdb_protein_dir ? "--gtdb-protein-dir \"${gtdb_protein_dir}\"" : ""
+    def stagedProteinRepDirName = gtdb_protein_rep_dir.getName()
 
     """
     set -euo pipefail
 
-    python -m NovoTax.cli create-dbs "${db_path}" ${releaseArg} ${gtdbArg}
+    python -m NovoTax.cli create-dbs "\$PWD" \\
+      --gtdb-release ${gtdb_release} \\
+      --gtdb-protein-rep-dir "\$PWD/${stagedProteinRepDirName}"
     """
 }
 
 workflow {
     if( params.create_dbs != null ) {
         CREATE_NOVOTAX_DBS(
-            Channel.value(createDbsPath),
             Channel.value(params.gtdb_release),
-            Channel.value(gtdbProteinDirPath)
+            Channel.value(file(gtdbProteinRepDirPath, checkIfExists: true))
         )
     }
     else {

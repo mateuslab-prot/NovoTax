@@ -32,10 +32,10 @@ NUMERIC_COLUMNS = [
     "protein_count",
 ]
 
-DOWNLOAD_DIRNAME = "tmp"
-TMP_DIRNAME = "tmp"
-
+DOWNLOAD_DIRNAME = "_downloads"
+TMP_DIRNAME = "_tmp_proteomes"
 DEFAULT_GTDB_RELEASE = 226
+REQUEST_TIMEOUT_SECONDS = 120
 
 
 def build_urls(gtdb_release: int) -> dict[str, str]:
@@ -51,18 +51,27 @@ def build_urls(gtdb_release: int) -> dict[str, str]:
     }
 
 
-def default_gtdb_protein_dir(gtdb_release: int) -> Path:
-    return Path(
-        f"/data/dbs/gtdb/release{gtdb_release}/proteins/protein_faa_reps/bacteria/"
-    )
-
-
 def filtered_metadata_filename(gtdb_release: int) -> str:
     return f"GTDB_r{gtdb_release}_filtered_metadata.tsv"
 
 
+def validate_existing_nonempty_dir(path: Path) -> Path:
+    resolved_path = Path(path).expanduser().resolve()
+
+    if not resolved_path.exists():
+        raise FileNotFoundError(f"GTDB protein representative directory does not exist: {resolved_path}")
+    if not resolved_path.is_dir():
+        raise NotADirectoryError(
+            f"GTDB protein representative path is not a directory: {resolved_path}"
+        )
+    if not any(resolved_path.iterdir()):
+        raise ValueError(f"GTDB protein representative directory is empty: {resolved_path}")
+
+    return resolved_path
+
+
 def download_file(url: str, destination: Path, chunk_size: int = 8192) -> None:
-    with requests.get(url, stream=True, timeout=120) as response:
+    with requests.get(url, stream=True, timeout=REQUEST_TIMEOUT_SECONDS) as response:
         response.raise_for_status()
         with destination.open("wb") as handle:
             for chunk in response.iter_content(chunk_size=chunk_size):
@@ -88,6 +97,12 @@ def safe_delete(path: Path) -> None:
     if path.exists():
         path.unlink()
         print(f"Deleted: {path}")
+
+
+def safe_rmtree(path: Path) -> None:
+    if path.exists():
+        print(f"Removing temporary directory: {path}")
+        shutil.rmtree(path)
 
 
 def add_taxonomy_columns(df: pd.DataFrame) -> pd.DataFrame:
@@ -159,7 +174,7 @@ def download_and_build_selected_rep_database(
     accessions: list[str],
     tmp_proteome_dir: Path,
     output_dir: Path,
-    gtdb_protein_dir: Path,
+    gtdb_protein_rep_dir: Path,
     gtdb_release: int,
 ) -> None:
     api_key = os.getenv("NCBI_API_KEY")
@@ -170,7 +185,7 @@ def download_and_build_selected_rep_database(
     downloader.download_proteomes(
         accessions=accessions,
         out_dir=str(tmp_proteome_dir),
-        gtdb_dir=str(gtdb_protein_dir),
+        gtdb_dir=str(gtdb_protein_rep_dir),
     )
 
     output_fasta = output_dir / f"GTDB_r{gtdb_release}_extended_genus_reps.fasta"
@@ -190,24 +205,22 @@ def download_and_build_selected_rep_database(
 def main(
     output_dir: Path,
     gtdb_release: int = DEFAULT_GTDB_RELEASE,
-    gtdb_protein_dir: Path | None = None,
+    gtdb_protein_rep_dir: Path | None = None,
 ) -> None:
-    output_dir = Path(output_dir).resolve()
+    if gtdb_protein_rep_dir is None:
+        raise ValueError("gtdb_protein_rep_dir is required")
 
-    if gtdb_protein_dir is None:
-        gtdb_protein_dir = default_gtdb_protein_dir(gtdb_release)
-    else:
-        gtdb_protein_dir = Path(gtdb_protein_dir).resolve()
-
-    urls = build_urls(gtdb_release)
+    output_dir = Path(output_dir).expanduser().resolve()
+    gtdb_protein_rep_dir = validate_existing_nonempty_dir(gtdb_protein_rep_dir)
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
     download_dir = output_dir / DOWNLOAD_DIRNAME
     tmp_proteome_dir = output_dir / TMP_DIRNAME
     filtered_metadata_file = output_dir / filtered_metadata_filename(gtdb_release)
+    urls = build_urls(gtdb_release)
 
-    download_dir.mkdir(exist_ok=True)
+    download_dir.mkdir(parents=True, exist_ok=True)
 
     all_dfs: list[pd.DataFrame] = []
     downloaded_files: list[Path] = []
@@ -216,15 +229,14 @@ def main(
         for source_name, url in urls.items():
             gz_path = download_dir / f"{source_name}_metadata.tsv.gz"
 
-            print(f"Downloading {source_name}...")
+            print(f"Downloading {source_name} metadata from {url} ...")
             download_file(url, gz_path)
             downloaded_files.append(gz_path)
 
-            print(f"Loading selected columns from {source_name}...")
+            print(f"Loading selected columns from {source_name} metadata ...")
             all_dfs.append(load_selected_columns_from_gzip(gz_path, source_name))
 
         data = pd.concat(all_dfs, ignore_index=True)
-
         data[COLUMNS_TO_KEEP].to_csv(filtered_metadata_file, sep="\t", index=False)
         print(f"Saved filtered GTDB metadata: {filtered_metadata_file}")
 
@@ -232,7 +244,7 @@ def main(
 
         print(f"Combined rows: {len(data):,}")
         print(
-            f"GTDB species representatives available: "
+            "GTDB species representatives available: "
             f"{(data['gtdb_representative'] == 't').sum():,}"
         )
 
@@ -241,7 +253,7 @@ def main(
         selected_family_count = selected_reps["family"].dropna().nunique()
         all_family_count = data["family"].dropna().nunique()
         print(
-            f"Families covered by selected reps: "
+            "Families covered by selected reps: "
             f"{selected_family_count:,} / {all_family_count:,}"
         )
 
@@ -254,21 +266,20 @@ def main(
 
         accessions = selected_summary["accession"].tolist()
         print(
-            f"Downloading/building proteome database for {len(accessions):,} accessions..."
+            "Downloading/building proteome database for "
+            f"{len(accessions):,} accessions ..."
         )
         download_and_build_selected_rep_database(
             accessions=accessions,
             tmp_proteome_dir=tmp_proteome_dir,
             output_dir=output_dir,
-            gtdb_protein_dir=gtdb_protein_dir,
+            gtdb_protein_rep_dir=gtdb_protein_rep_dir,
             gtdb_release=gtdb_release,
         )
-
     finally:
-        print("Cleaning up downloaded GTDB metadata files...")
+        print("Cleaning up downloaded GTDB metadata files ...")
         for path in downloaded_files:
             safe_delete(path)
 
-        if tmp_proteome_dir.exists():
-            print(f"Removing temporary directory: {tmp_proteome_dir}")
-            shutil.rmtree(tmp_proteome_dir)
+        safe_rmtree(download_dir)
+        safe_rmtree(tmp_proteome_dir)

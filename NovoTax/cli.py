@@ -4,6 +4,9 @@ import argparse
 from pathlib import Path
 
 
+DEFAULT_GTDB_RELEASE = 226
+
+
 def parse_bool(value: str) -> bool:
     normalized = value.strip().lower()
     if normalized in {"true", "t", "1", "yes", "y"}:
@@ -11,6 +14,26 @@ def parse_bool(value: str) -> bool:
     if normalized in {"false", "f", "0", "no", "n"}:
         return False
     raise argparse.ArgumentTypeError("Expected true or false")
+
+
+def positive_int(value: str) -> int:
+    parsed = int(value)
+    if parsed < 1:
+        raise argparse.ArgumentTypeError("Expected a positive integer")
+    return parsed
+
+
+def existing_nonempty_dir(value: str) -> Path:
+    path = Path(value).expanduser().resolve()
+
+    if not path.exists():
+        raise argparse.ArgumentTypeError(f"Directory does not exist: {path}")
+    if not path.is_dir():
+        raise argparse.ArgumentTypeError(f"Expected a directory path: {path}")
+    if not any(path.iterdir()):
+        raise argparse.ArgumentTypeError(f"Directory is empty: {path}")
+
+    return path
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -26,26 +49,24 @@ def build_parser() -> argparse.ArgumentParser:
         help="Build NovoTax databases in the given directory",
     )
     create_dbs_parser.add_argument(
-        "db_path",
+        "output_dir",
         type=Path,
-        help="Directory where databases should be created",
+        help="Directory where NovoTax database files should be written",
+    )
+    create_dbs_parser.add_argument(
+        "--gtdb-protein-rep-dir",
+        type=existing_nonempty_dir,
+        required=True,
+        help=(
+            "Path to the GTDB representative protein FASTA directory. "
+            "This directory must exist and must not be empty."
+        ),
     )
     create_dbs_parser.add_argument(
         "--gtdb-release",
-        type=int,
-        default=226,
-        help="GTDB release version to use (default: 226)",
-    )
-    create_dbs_parser.add_argument(
-        "--gtdb-protein-dir",
-        type=Path,
-        required=False,
-        default=None,
-        help=(
-            "Path to GTDB protein directory. "
-            "If omitted, it will default to "
-            "/data/dbs/gtdb/release<gtdb-release>/proteins/protein_faa_reps/bacteria/"
-        ),
+        type=positive_int,
+        default=DEFAULT_GTDB_RELEASE,
+        help=f"GTDB release version to use (default: {DEFAULT_GTDB_RELEASE})",
     )
 
     classify_parser = subparsers.add_parser(
@@ -105,24 +126,21 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def run_create_dbs(
-    db_path: Path,
+    output_dir: Path,
     gtdb_release: int,
-    gtdb_protein_dir: Path | None,
+    gtdb_protein_rep_dir: Path,
 ) -> None:
     from NovoTax.dbs.construct_databases import main as construct_databases_main
 
-    db_path = db_path.resolve()
-    db_path.mkdir(parents=True, exist_ok=True)
-
-    if gtdb_protein_dir is None:
-        gtdb_protein_dir = Path(
-            f"/data/dbs/gtdb/release{gtdb_release}/proteins/protein_faa_reps/bacteria/"
-        )
+    output_dir = output_dir.expanduser().resolve()
+    if output_dir.exists() and not output_dir.is_dir():
+        raise NotADirectoryError(f"Output path exists and is not a directory: {output_dir}")
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     construct_databases_main(
-        output_dir=db_path,
+        output_dir=output_dir,
         gtdb_release=gtdb_release,
-        gtdb_protein_dir=gtdb_protein_dir,
+        gtdb_protein_rep_dir=gtdb_protein_rep_dir,
     )
 
 
@@ -165,11 +183,13 @@ def main() -> None:
 
     if args.command == "create-dbs":
         run_create_dbs(
-            db_path=args.db_path,
+            output_dir=args.output_dir,
             gtdb_release=args.gtdb_release,
-            gtdb_protein_dir=args.gtdb_protein_dir,
+            gtdb_protein_rep_dir=args.gtdb_protein_rep_dir,
         )
-    elif args.command == "classify":
+        return
+
+    if args.command == "classify":
         run_classify(
             filepath=args.filepath,
             output_dir=args.output_dir,
@@ -180,8 +200,9 @@ def main() -> None:
             max_iterations=args.max_iterations,
             max_strains=args.max_strains,
         )
-    else:
-        parser.error(f"Unknown command: {args.command}")
+        return
+
+    parser.error(f"Unknown command: {args.command}")
 
 
 if __name__ == "__main__":
