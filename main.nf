@@ -1,53 +1,76 @@
 nextflow.enable.dsl=2
 
-if( params.model_file != null ) {
-    if( !file(params.model_file).exists() ) {
+def createDbsPath = params.create_dbs != null
+    ? new File(params.create_dbs.toString()).absolutePath
+    : null
+
+def gtdbProteinDirPath = params.gtdb_protein_dir != null
+    ? new File(params.gtdb_protein_dir.toString()).absolutePath
+    : ''
+
+if( params.create_dbs != null ) {
+    def createDbsTarget = new File(createDbsPath)
+
+    if( createDbsTarget.exists() && !createDbsTarget.isDirectory() ) {
+        error "--create_dbs must point to a directory path, not a file: ${params.create_dbs}"
+    }
+
+    if( params.gtdb_protein_dir != null && !file(params.gtdb_protein_dir).exists() ) {
+        error "GTDB protein directory not found: ${params.gtdb_protein_dir}"
+    }
+}
+else {
+    if( params.samplesheet == null ) {
+        error "When running classification, you must provide --samplesheet"
+    }
+
+    if( params.model_file != null && !file(params.model_file).exists() ) {
         error "XuanjiNovo model file not found: ${params.model_file}"
     }
-}
 
-if( params.cascadia_model_file != null ) {
-    if( !file(params.cascadia_model_file).exists() ) {
+    if( params.cascadia_model_file != null && !file(params.cascadia_model_file).exists() ) {
         error "Cascadia model file not found: ${params.cascadia_model_file}"
     }
-}
 
-if( params.novotax_db_path != null ) {
+    if( params.novotax_db_path == null ) {
+        error "When running classification, you must provide --novotax_db_path"
+    }
+
     if( !file(params.novotax_db_path).exists() ) {
         error "NovoTax DB directory not found: ${params.novotax_db_path}"
     }
-}
 
-if( params.novotax_filter_host != null ) {
-    if( !file(params.novotax_filter_host).exists() ) {
+    if( params.novotax_filter_host != null && !file(params.novotax_filter_host).exists() ) {
         error "NovoTax host filter path not found: ${params.novotax_filter_host}"
     }
 }
 
-Channel
-    .fromPath(params.samplesheet, checkIfExists: true)
-    .splitCsv(header: true, sep: '\t')
-    .map { row ->
-        def sample_name  = row.sample_name?.toString()?.trim()
-        def file_path    = row.file_path?.toString()?.trim()
-        def data_format  = row.data_format?.toString()?.trim()?.toLowerCase()
+if( params.create_dbs == null ) {
+    Channel
+        .fromPath(params.samplesheet, checkIfExists: true)
+        .splitCsv(header: true, sep: '\t')
+        .map { row ->
+            def sample_name = row.sample_name?.toString()?.trim()
+            def file_path   = row.file_path?.toString()?.trim()
+            def data_format = row.data_format?.toString()?.trim()?.toLowerCase()
 
-        if( !sample_name || !file_path || !data_format ) {
-            error "Each row in samples.tsv must contain sample_name, file_path, and data_format"
+            if( !sample_name || !file_path || !data_format ) {
+                error "Each row in samples.tsv must contain sample_name, file_path, and data_format"
+            }
+
+            if( !(data_format in ['dda', 'dia']) ) {
+                error "Unsupported data_format '${data_format}' for sample '${sample_name}'. Supported values: dda, dia"
+            }
+
+            def input_file = file(file_path)
+            if( !input_file.exists() ) {
+                error "Input file not found for sample '${sample_name}': ${file_path}"
+            }
+
+            tuple(sample_name, input_file, data_format)
         }
-
-        if( !(data_format in ['dda', 'dia']) ) {
-            error "Unsupported data_format '${data_format}' for sample '${sample_name}'. Supported values: dda, dia"
-        }
-
-        def input_file = file(file_path)
-        if( !input_file.exists() ) {
-            error "Input file not found for sample '${sample_name}': ${file_path}"
-        }
-
-        tuple(sample_name, input_file, data_format)
-    }
-    .set { samples_ch }
+        .set { samples_ch }
+}
 
 process RUN_XUANJINOVO_WITH_MODEL {
     tag { sample_name }
@@ -217,42 +240,31 @@ process RUN_NOVOTAX {
 process CREATE_NOVOTAX_DBS {
     tag "create_dbs"
 
-    publishDir { params.create_dbs }, mode: 'copy'
-
     input:
+    val db_path
+    val gtdb_release
     val gtdb_protein_dir
-    val genus_rep_dir
-
-    output:
-    path "novotax_dbs"
 
     script:
-    def gtdbArg     = gtdb_protein_dir ? "--gtdb-protein-dir \"${gtdb_protein_dir}\"" : ""
-    def genusRepArg = genus_rep_dir ? "--genus-rep-dir \"${genus_rep_dir}\"" : ""
+    def releaseArg = "--gtdb-release ${gtdb_release}"
+    def gtdbArg = gtdb_protein_dir ? "--gtdb-protein-dir \"${gtdb_protein_dir}\"" : ""
 
     """
     set -euo pipefail
 
-    python -m NovoTax.cli create-dbs novotax_dbs ${gtdbArg} ${genusRepArg}
+    python -m NovoTax.cli create-dbs "${db_path}" ${releaseArg} ${gtdbArg}
     """
 }
 
 workflow {
     if( params.create_dbs != null ) {
-        if( params.gtdb_protein_dir == null ) {
-            error "When using --create_dbs, you must also provide --gtdb_protein_dir"
-        }
-
         CREATE_NOVOTAX_DBS(
-            Channel.value(params.gtdb_protein_dir),
-            Channel.value(params.genus_rep_dir)
+            Channel.value(createDbsPath),
+            Channel.value(params.gtdb_release),
+            Channel.value(gtdbProteinDirPath)
         )
     }
     else {
-        if( params.novotax_db_path == null ) {
-            error "When running classification, you must provide --novotax_db_path"
-        }
-
         dda_samples_ch = samples_ch.filter { sample_name, input_file, data_format ->
             data_format == 'dda'
         }
