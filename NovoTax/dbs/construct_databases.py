@@ -15,9 +15,11 @@ from NovoTax.dbs.create_db import build_mmseqs_db, process_fasta_folder_to_singl
 from NovoTax.dbs.ncbi import NCBIProteomeDownloader
 
 
+gtdb_release = 226
+
 URLS = {
-    "bac120": "https://data.gtdb.aau.ecogenomic.org/releases/latest/bac120_metadata.tsv.gz",
-    "ar53": "https://data.gtdb.aau.ecogenomic.org/releases/latest/ar53_metadata.tsv.gz",
+    "bac120": f"https://data.gtdb.aau.ecogenomic.org/releases/release{gtdb_release}/{gtdb_release}.0/bac120_metadata.tsv.gz",
+    "ar53": f"https://data.gtdb.aau.ecogenomic.org/releases/release{gtdb_release}/{gtdb_release}.0/ar53_metadata.tsv.gz",
 }
 
 COLUMNS_TO_KEEP = [
@@ -39,6 +41,7 @@ NUMERIC_COLUMNS = [
 DOWNLOAD_DIRNAME = "gtdb_downloads"
 TMP_DIRNAME = "tmp"
 COMBINED_METADATA_FILENAME = "gtdb_selected_metadata.tsv"
+FILTERED_METADATA_FILENAME = f"GTDB_r{gtdb_release}_filtered_metadata.tsv"
 SELECTED_REPS_FILENAME = "extended_reps.tsv"
 OUTPUT_FASTA_BASENAME = "extended_genus_reps"
 
@@ -184,6 +187,7 @@ def main(
     download_dir = output_dir / DOWNLOAD_DIRNAME
     tmp_proteome_dir = output_dir / TMP_DIRNAME
     combined_metadata_file = output_dir / COMBINED_METADATA_FILENAME
+    filtered_metadata_file = output_dir / FILTERED_METADATA_FILENAME
     selected_reps_file = output_dir / SELECTED_REPS_FILENAME
 
     download_dir.mkdir(exist_ok=True)
@@ -203,6 +207,10 @@ def main(
             all_dfs.append(load_selected_columns_from_gzip(gz_path, source_name))
 
         data = pd.concat(all_dfs, ignore_index=True)
+
+        data[COLUMNS_TO_KEEP].to_csv(filtered_metadata_file, sep="\t", index=False)
+        print(f"Saved filtered GTDB metadata: {filtered_metadata_file}")
+
         data = add_taxonomy_columns(data)
 
         data[
