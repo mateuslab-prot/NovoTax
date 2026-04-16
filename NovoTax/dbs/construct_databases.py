@@ -33,9 +33,6 @@ NUMERIC_COLUMNS = [
 
 DOWNLOAD_DIRNAME = "gtdb_downloads"
 TMP_DIRNAME = "tmp"
-COMBINED_METADATA_FILENAME = "gtdb_selected_metadata.tsv"
-SELECTED_REPS_FILENAME = "extended_reps.tsv"
-OUTPUT_FASTA_BASENAME = "extended_genus_reps"
 
 DEFAULT_GTDB_RELEASE = 226
 
@@ -162,6 +159,7 @@ def download_and_build_selected_rep_database(
     tmp_proteome_dir: Path,
     output_dir: Path,
     gtdb_protein_dir: Path,
+    gtdb_release: int,
 ) -> None:
     api_key = os.getenv("NCBI_API_KEY")
     downloader = NCBIProteomeDownloader(api_key=api_key)
@@ -174,8 +172,8 @@ def download_and_build_selected_rep_database(
         gtdb_dir=str(gtdb_protein_dir),
     )
 
-    output_fasta = output_dir / f"{OUTPUT_FASTA_BASENAME}.fasta"
-    output_db = output_dir / OUTPUT_FASTA_BASENAME
+    output_fasta = output_dir / f"GTDB_r{gtdb_release}_extended_genus_reps.fasta"
+    output_db = output_dir / f"GTDB_r{gtdb_release}_extended_genus_reps"
 
     process_fasta_folder_to_single(
         folder=str(tmp_proteome_dir),
@@ -206,9 +204,7 @@ def main(
 
     download_dir = output_dir / DOWNLOAD_DIRNAME
     tmp_proteome_dir = output_dir / TMP_DIRNAME
-    combined_metadata_file = output_dir / COMBINED_METADATA_FILENAME
     filtered_metadata_file = output_dir / filtered_metadata_filename(gtdb_release)
-    selected_reps_file = output_dir / SELECTED_REPS_FILENAME
 
     download_dir.mkdir(exist_ok=True)
 
@@ -233,10 +229,6 @@ def main(
 
         data = add_taxonomy_columns(data)
 
-        data[
-            COLUMNS_TO_KEEP + ["family", "genus", "species", "source"]
-        ].to_csv(combined_metadata_file, sep="\t", index=False)
-
         print(f"Combined rows: {len(data):,}")
         print(
             f"GTDB species representatives available: "
@@ -254,13 +246,10 @@ def main(
 
         selected_summary = selected_reps[
             ["accession", "gtdb_taxonomy", "protein_count", "source"]
-        ].rename(columns={"gtdb_taxonomy": "taxonomy"})
-
-        selected_summary.to_csv(selected_reps_file, sep="\t", index=False)
+        ]
 
         print(f"Selected reps: {len(selected_summary):,}")
         print(f"Total protein count: {selected_summary['protein_count'].sum():,}")
-        print(f"Saved: {selected_reps_file}")
 
         accessions = selected_summary["accession"].tolist()
         print(
@@ -271,6 +260,7 @@ def main(
             tmp_proteome_dir=tmp_proteome_dir,
             output_dir=output_dir,
             gtdb_protein_dir=gtdb_protein_dir,
+            gtdb_release=gtdb_release,
         )
 
     finally:
