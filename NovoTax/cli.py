@@ -31,11 +31,21 @@ def build_parser() -> argparse.ArgumentParser:
         help="Directory where databases should be created",
     )
     create_dbs_parser.add_argument(
+        "--gtdb-release",
+        type=int,
+        default=226,
+        help="GTDB release version to use (default: 226)",
+    )
+    create_dbs_parser.add_argument(
         "--gtdb-protein-dir",
         type=Path,
         required=False,
-        default=Path("/data/dbs/gtdb/release226/proteins/protein_faa_reps/bacteria/"),
-        help="Path to GTDB protein directory",
+        default=None,
+        help=(
+            "Path to GTDB protein directory. "
+            "If omitted, it will default to "
+            "/data/dbs/gtdb/release<gtdb-release>/proteins/protein_faa_reps/bacteria/"
+        ),
     )
 
     classify_parser = subparsers.add_parser(
@@ -94,14 +104,24 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def run_create_dbs(db_path: Path, gtdb_protein_dir: Path) -> None:
+def run_create_dbs(
+    db_path: Path,
+    gtdb_release: int,
+    gtdb_protein_dir: Path | None,
+) -> None:
     from NovoTax.dbs.construct_databases import main as construct_databases_main
 
     db_path = db_path.resolve()
     db_path.mkdir(parents=True, exist_ok=True)
 
+    if gtdb_protein_dir is None:
+        gtdb_protein_dir = Path(
+            f"/data/dbs/gtdb/release{gtdb_release}/proteins/protein_faa_reps/bacteria/"
+        )
+
     construct_databases_main(
         output_dir=db_path,
+        gtdb_release=gtdb_release,
         gtdb_protein_dir=gtdb_protein_dir,
     )
 
@@ -144,7 +164,11 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.command == "create-dbs":
-        run_create_dbs(args.db_path, args.gtdb_protein_dir)
+        run_create_dbs(
+            db_path=args.db_path,
+            gtdb_release=args.gtdb_release,
+            gtdb_protein_dir=args.gtdb_protein_dir,
+        )
     elif args.command == "classify":
         run_classify(
             filepath=args.filepath,

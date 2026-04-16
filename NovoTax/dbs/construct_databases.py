@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import argparse
 import gzip
 import os
 import shutil
@@ -15,13 +14,6 @@ import requests
 from NovoTax.dbs.create_db import build_mmseqs_db, process_fasta_folder_to_single
 from NovoTax.dbs.ncbi import NCBIProteomeDownloader
 
-
-gtdb_release = 226
-
-URLS = {
-    "bac120": f"https://data.gtdb.aau.ecogenomic.org/releases/release{gtdb_release}/{gtdb_release}.0/bac120_metadata.tsv.gz",
-    "ar53": f"https://data.gtdb.aau.ecogenomic.org/releases/release{gtdb_release}/{gtdb_release}.0/ar53_metadata.tsv.gz",
-}
 
 COLUMNS_TO_KEEP = [
     "accession",
@@ -42,13 +34,33 @@ NUMERIC_COLUMNS = [
 DOWNLOAD_DIRNAME = "gtdb_downloads"
 TMP_DIRNAME = "tmp"
 COMBINED_METADATA_FILENAME = "gtdb_selected_metadata.tsv"
-FILTERED_METADATA_FILENAME = f"GTDB_r{gtdb_release}_filtered_metadata.tsv"
 SELECTED_REPS_FILENAME = "extended_reps.tsv"
 OUTPUT_FASTA_BASENAME = "extended_genus_reps"
 
-DEFAULT_GTDB_PROTEIN_DIR = Path(
-    "/data/dbs/gtdb/release226/proteins/protein_faa_reps/bacteria/"
-)
+DEFAULT_GTDB_RELEASE = 226
+
+
+def build_urls(gtdb_release: int) -> dict[str, str]:
+    return {
+        "bac120": (
+            f"https://data.gtdb.aau.ecogenomic.org/releases/"
+            f"release{gtdb_release}/{gtdb_release}.0/bac120_metadata.tsv.gz"
+        ),
+        "ar53": (
+            f"https://data.gtdb.aau.ecogenomic.org/releases/"
+            f"release{gtdb_release}/{gtdb_release}.0/ar53_metadata.tsv.gz"
+        ),
+    }
+
+
+def default_gtdb_protein_dir(gtdb_release: int) -> Path:
+    return Path(
+        f"/data/dbs/gtdb/release{gtdb_release}/proteins/protein_faa_reps/bacteria/"
+    )
+
+
+def filtered_metadata_filename(gtdb_release: int) -> str:
+    return f"GTDB_r{gtdb_release}_filtered_metadata.tsv"
 
 
 def download_file(url: str, destination: Path, chunk_size: int = 8192) -> None:
@@ -178,17 +190,24 @@ def download_and_build_selected_rep_database(
 
 def main(
     output_dir: Path,
-    gtdb_protein_dir: Path = DEFAULT_GTDB_PROTEIN_DIR,
+    gtdb_release: int = DEFAULT_GTDB_RELEASE,
+    gtdb_protein_dir: Path | None = None,
 ) -> None:
     output_dir = Path(output_dir).resolve()
-    gtdb_protein_dir = Path(gtdb_protein_dir).resolve()
+
+    if gtdb_protein_dir is None:
+        gtdb_protein_dir = default_gtdb_protein_dir(gtdb_release)
+    else:
+        gtdb_protein_dir = Path(gtdb_protein_dir).resolve()
+
+    urls = build_urls(gtdb_release)
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
     download_dir = output_dir / DOWNLOAD_DIRNAME
     tmp_proteome_dir = output_dir / TMP_DIRNAME
     combined_metadata_file = output_dir / COMBINED_METADATA_FILENAME
-    filtered_metadata_file = output_dir / FILTERED_METADATA_FILENAME
+    filtered_metadata_file = output_dir / filtered_metadata_filename(gtdb_release)
     selected_reps_file = output_dir / SELECTED_REPS_FILENAME
 
     download_dir.mkdir(exist_ok=True)
@@ -197,7 +216,7 @@ def main(
     downloaded_files: list[Path] = []
 
     try:
-        for source_name, url in URLS.items():
+        for source_name, url in urls.items():
             gz_path = download_dir / f"{source_name}_metadata.tsv.gz"
 
             print(f"Downloading {source_name}...")
@@ -262,27 +281,3 @@ def main(
         if tmp_proteome_dir.exists():
             print(f"Removing temporary directory: {tmp_proteome_dir}")
             shutil.rmtree(tmp_proteome_dir)
-
-
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Download GTDB metadata, select representatives, and build an MMseqs database."
-    )
-    parser.add_argument(
-        "--outdir",
-        type=Path,
-        default=Path("."),
-        help="Output directory for metadata, FASTA, and MMseqs database files.",
-    )
-    parser.add_argument(
-        "--gtdb-protein-dir",
-        type=Path,
-        default=DEFAULT_GTDB_PROTEIN_DIR,
-        help="Path to local GTDB protein FASTA representative files.",
-    )
-    return parser.parse_args()
-
-
-if __name__ == "__main__":
-    args = parse_args()
-    main(args.outdir, args.gtdb_protein_dir)
