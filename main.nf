@@ -12,6 +12,18 @@ if( params.cascadia_model_file != null ) {
     }
 }
 
+if( params.novotax_db_path != null ) {
+    if( !file(params.novotax_db_path).exists() ) {
+        error "NovoTax DB directory not found: ${params.novotax_db_path}"
+    }
+}
+
+if( params.novotax_filter_host != null ) {
+    if( !file(params.novotax_filter_host).exists() ) {
+        error "NovoTax host filter path not found: ${params.novotax_filter_host}"
+    }
+}
+
 Channel
     .fromPath(params.samplesheet, checkIfExists: true)
     .splitCsv(header: true, sep: '\t')
@@ -164,40 +176,55 @@ process RUN_CASCADIA_DEFAULT_MODEL {
 process RUN_NOVOTAX {
     tag { sample_name }
 
-    publishDir { "${params.outdir}/${sample_name}" }, mode: 'copy'
+    publishDir { "${params.outdir}" }, mode: 'copy'
 
     input:
     tuple val(sample_name), path(result_file), val(data_format)
+    path novotax_db_dir
+    path host_filter_file
+    val host_filter_arg
 
     output:
-    path "${sample_name}_novotax.fasta"
+    tuple val(sample_name), path("novotax_out/${sample_name}")
 
     script:
     def result_name = result_file.getName()
+    def db_dir_name = novotax_db_dir.getName()
+    def filterContArg = params.novotax_filter_contaminants ? '--filter_contaminants true' : '--filter_contaminants false'
+    def ncbiApiArg = params.novotax_ncbi_api_key ? "--ncbi_api_key \"${params.novotax_ncbi_api_key}\"" : ""
 
     """
     set -euo pipefail
 
-    python /app/main.py \
-      "${sample_name}" \
-      "${result_name}" \
-      "${data_format}" \
-      "${sample_name}_novotax.fasta"
+    WORKDIR="\$(pwd)"
+    OUT_ROOT="\$WORKDIR/novotax_out"
+
+    mkdir -p "\$OUT_ROOT"
+    rm -rf "\$WORKDIR/mmseqs_dbs"
+    ln -s "\$WORKDIR/${db_dir_name}" "\$WORKDIR/mmseqs_dbs"
+
+    python -m NovoTax.cli classify "\$WORKDIR/${result_name}" \\
+      -o "\$OUT_ROOT" \\
+      ${filterContArg} \\
+      ${host_filter_arg} \\
+      ${ncbiApiArg} \\
+      --genus_score ${params.novotax_genus_score} \\
+      --max_iterations ${params.novotax_max_iterations} \\
+      --max_strains ${params.novotax_max_strains}
     """
 }
 
 process CREATE_NOVOTAX_DBS {
     tag "create_dbs"
 
-    publishDir { "${params.outdir}/novotax_dbs" }, mode: 'copy'
+    publishDir { params.create_dbs }, mode: 'copy'
 
     input:
-    val db_path
     val gtdb_protein_dir
     val genus_rep_dir
 
     output:
-    path "create_dbs.done"
+    path "novotax_dbs"
 
     script:
     def gtdbArg     = gtdb_protein_dir ? "--gtdb-protein-dir \"${gtdb_protein_dir}\"" : ""
@@ -206,11 +233,7 @@ process CREATE_NOVOTAX_DBS {
     """
     set -euo pipefail
 
-    mkdir -p "${db_path}"
-
-    python -m NovoTax.cli create-dbs "${db_path}" ${gtdbArg} ${genusRepArg}
-
-    touch create_dbs.done
+    python -m NovoTax.cli create-dbs novotax_dbs ${gtdbArg} ${genusRepArg}
     """
 }
 
@@ -221,12 +244,15 @@ workflow {
         }
 
         CREATE_NOVOTAX_DBS(
-            Channel.value(params.create_dbs),
             Channel.value(params.gtdb_protein_dir),
             Channel.value(params.genus_rep_dir)
         )
     }
     else {
+        if( params.novotax_db_path == null ) {
+            error "When running classification, you must provide --novotax_db_path"
+        }
+
         dda_samples_ch = samples_ch.filter { sample_name, input_file, data_format ->
             data_format == 'dda'
         }
@@ -250,7 +276,26 @@ workflow {
             : RUN_CASCADIA_DEFAULT_MODEL(dia_samples_ch)
 
         all_results = xuanjinovo_results.mix(cascadia_results)
+        novotax_db_ch = Channel.value(file(params.novotax_db_path))
 
-        RUN_NOVOTAX(all_results)
+        dummy_host_file = file("${projectDir}/assets/no_host_filter.txt")
+        host_filter_file_ch = Channel.value(
+            params.novotax_filter_host != null
+                ? file(params.novotax_filter_host)
+                : dummy_host_file
+        )
+
+        host_filter_arg_ch = Channel.value(
+            params.novotax_filter_host != null
+                ? "--filter_host \"\$(pwd)/${file(params.novotax_filter_host).getName()}\""
+                : ""
+        )
+
+        RUN_NOVOTAX(
+            all_results,
+            novotax_db_ch,
+            host_filter_file_ch,
+            host_filter_arg_ch
+        )
     }
 }
