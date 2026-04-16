@@ -51,7 +51,7 @@ def build_parser() -> argparse.ArgumentParser:
         "-o",
         "--output_dir",
         type=Path,
-        default=Path("novotax_output"),
+        default=Path("/out"),
         help="Directory where classification results and run artifacts should be written",
     )
     classify_parser.add_argument(
