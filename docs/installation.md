@@ -163,13 +163,20 @@ docker run --rm --gpus all nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
 ### Genus database
 NovoTax uses [**GTDB**](https://gtdb.ecogenomic.org) as the database for proteomes and phylogenetic information. To run NovoTax, this database first needs to be prepared. Then, the path to the database is supplied with the `--gtdb_dir PATH` flag.
 
-It's available as a downloadable compressed database, or if you prefer, it can be constructed from scratch.
-
-### Downloading the genus database
-To download the genus database, simply download the compressed database, for example with:
+1. Go to [GTDB downloads](https://gtdb.ecogenomic.org/downloads) and select the mirror best suited to you.
+2. Choose the release you want to use. For the analysis made in the NovoTax paper r226 was used, but for best coverage we recommend using the latest release (at the time of writing r232).
+3. Go to `genomic_files_reps` and download the `gtdb_proteins_aa_reps_r226.tar.gz` or equivalent file for your chosen release. Or directly from the terminal using your prefered tool, for example:
 ```bash
-wget *LINK_TO_UPDATED_ZENODO_OR_GIT*
+wget https://data.gtdb.ecogenomic.org/releases/release226/226.0/genomic_files_reps/gtdb_proteins_aa_reps_r226.tar.gz
 ```
+4. Extract the files:
+```bash
+tar xzf gtdb_proteins_aa_reps_r226.tar.gz
+```
+5. Bacteria and archaea are seperated by default, combine them into one folder:
+```bash
+find protein_faa_reps/{bacteria,archaea} -maxdepth 1 -type f -name '*.faa.gz' -exec mv -t protein_faa_reps {} +
+``` 
 
 ### Building the genus database
 The database can also be built from scratch using GTDB data. This can be useful if you for example want to use a different [**GTDB release**](https://gtdb.ecogenomic.org/stats/r232).

@@ -725,7 +725,7 @@ def main(
             out.write(f"max_strains\t{max_strains}\n")
 
             print(f"\nWorking on {sample_name}")
-            print(f"*** Found {len(peptides)} unique peptides ***")
+            print(f"*** Found {len(peptides)} peptides ***")
 
             if filter_contaminants and peptides:
                 filter_against_db(
