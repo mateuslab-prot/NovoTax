@@ -44,11 +44,11 @@ def build_urls(gtdb_release: int) -> dict[str, str]:
     return {
         "bac120": (
             f"https://data.gtdb.aau.ecogenomic.org/releases/"
-            f"release{gtdb_release}/{gtdb_release}.0/bac120_metadata.tsv.gz"
+            f"release{gtdb_release}/{gtdb_release}.0/bac120_metadata_r{gtdb_release}.tsv.gz"
         ),
         "ar53": (
             f"https://data.gtdb.aau.ecogenomic.org/releases/"
-            f"release{gtdb_release}/{gtdb_release}.0/ar53_metadata.tsv.gz"
+            f"release{gtdb_release}/{gtdb_release}.0/ar53_metadata_r{gtdb_release}.tsv.gz"
         ),
     }
 
