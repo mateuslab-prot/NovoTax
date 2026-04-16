@@ -18,6 +18,7 @@ from NovoTax.dbs.ncbi import NCBIProteomeDownloader
 COLUMNS_TO_KEEP = [
     "accession",
     "gtdb_representative",
+    "gtdb_genome_representative",
     "gtdb_type_species_of_genus",
     "gtdb_taxonomy",
     "checkm2_completeness",
