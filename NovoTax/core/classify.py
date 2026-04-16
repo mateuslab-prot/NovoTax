@@ -19,8 +19,8 @@ from NovoTax.core.mmseqs_search import mmseqs_easy_search
 from NovoTax.dbs.ncbi import NCBIProteomeDownloader
 
 
-SELECTED_REPS_DB = Path("mmseqs_dbs/selected_reps")
-CRAP_DB = Path("mmseqs_dbs/crap")
+SELECTED_REPS_DB = Path("/home/desv/manuscripts/denovo/mmseqs_dbs/selected_reps")
+CRAP_DB = Path("/home/desv/manuscripts/denovo/mmseqs_dbs/crap")
 GTDB_PROTEIN_DIR = Path("/data/dbs/gtdb/release226/proteins/protein_faa_reps/bacteria/")
 
 DEFAULT_SCORE_THRESHOLD = 0.8
