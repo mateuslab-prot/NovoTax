@@ -4,8 +4,6 @@
 
 The base command for running NovoTax is `nextflow run mateuslab-prot/novotax`. To control the input, output and models used, the following flags are available:
 
-**NCBI datasets** reads your [API key](https://www.ncbi.nlm.nih.gov/datasets/docs/v2/api/api-keys/) to increase rate limits and access to their data by reading the `NCBI_API_KEY`environment key. If possible, ensure this exists in your environment with `export NCBI_API_KEY='YOUR_KEY'`, preferably putting it into your `.bashrc`or equivalent.
-
 **One time flags**  
 `-create-dbs PATH` - Creates the GTDB genus database locally at your chosen path. The database size is **~20GB**. 
 
@@ -22,11 +20,11 @@ Different profiles exist depending on which system and container platform you're
 **Optional**  
 `--xuanjinovo_model_file PATH` - Path to a XuanjiNovo model file, [see **models** section below](#models).  
 `--cascadia_model_file PATH`- Path to a Cascadia model file, [see **models** section below](#models).  
-`--contaminants_off` - Ignore [cRAP contaminants](https://www.thegpm.org/crap/) filter step. Can be turned off if sample is expected to be of high purity.  
-`--host PATH` - Path to fasta file containing host proteome to filter host related peptides  (default **NONE**). Can be used if host contaminations are expected.  
+`--filter_contaminants true/false` - Filter [cRAP contaminants](https://www.thegpm.org/crap/) (default **true**). Can be turned off if sample is expected to be of high purity.  
+`--filter_host PATH` - Path to fasta file containing host proteome to filter host related peptides (default **NONE**). Can be used if host contaminations are expected.  
 `--ncbi_api_key KEY` - [NCBI API key](https://www.ncbi.nlm.nih.gov/datasets/docs/v2/api/api-keys/) to increase rate limits and access to NCBI servers.  
 `--genus_score float` -  Min. value of genus score for the search iterations to continue (default: **1275**). Can be decreased to include less confident species.  
-`--max_iterations int`- Max. number of iterations before NovoTax halts (default: **20**). This value can be increased if a community is expected to have more than 20 strains.  
+`--max_iterations int`- Max. number of iterations before NovoTax halts (default: **20**). This value can be increased if a community is expected to consist of more than 20 strains.  
 `--max_strains int`- Max. number of strains downloaded per species. (default: **1000**). Can be increased to get better strain coverage at the cost of increased disk usage and runtime.
 
 ## Input
