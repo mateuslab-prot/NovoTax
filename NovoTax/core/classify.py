@@ -221,9 +221,9 @@ def detect_input_format(path: Path) -> str:
             if not parts or all(not field for field in parts):
                 continue
             if len(parts) == 4:
-                return "dda"
+                return "xuanjinovo"
             if len(parts) >= 6:
-                return "dia"
+                return "cascadia"
 
     raise ValueError(
         f"Could not infer input format for {path}. Expected XuanjiNovo-style (4 columns) "
@@ -233,9 +233,9 @@ def detect_input_format(path: Path) -> str:
 
 def get_reader_for_file(path: Path) -> tuple[str, Callable[[Path, float], dict[str, str]]]:
     data_format = detect_input_format(path)
-    if data_format == "dda":
+    if data_format == "xuanjinovo":
         return data_format, read_xuanjinovo
-    if data_format == "dia":
+    if data_format == "cascadia":
         return data_format, read_cascadia
     raise ValueError(f"Unsupported data format: {data_format}")
 
