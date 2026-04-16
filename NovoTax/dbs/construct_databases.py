@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import argparse
 import gzip
 import os
 import shutil
@@ -263,5 +264,25 @@ def main(
             shutil.rmtree(tmp_proteome_dir)
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Download GTDB metadata, select representatives, and build an MMseqs database."
+    )
+    parser.add_argument(
+        "--outdir",
+        type=Path,
+        default=Path("."),
+        help="Output directory for metadata, FASTA, and MMseqs database files.",
+    )
+    parser.add_argument(
+        "--gtdb-protein-dir",
+        type=Path,
+        default=DEFAULT_GTDB_PROTEIN_DIR,
+        help="Path to local GTDB protein FASTA representative files.",
+    )
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
-    main(Path("output_folder"), DEFAULT_GTDB_PROTEIN_DIR)
+    args = parse_args()
+    main(args.outdir, args.gtdb_protein_dir)
