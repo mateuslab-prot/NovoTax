@@ -5,17 +5,14 @@ def strip_accession_prefix(accession: str) -> str:
     return re.sub(r'^(RS_|GB_)', '', accession)
 
 class GTDB:
-    def __init__(self, data_path='data/bac120_metadata_r226_filtered_columns.tsv'):
-        # Read metadata once and store it on the instance
+    def __init__(self, data_path='/home/desv/opt/NovoTax_r1/NovoTax/assets/gtdb/GTDB_r226_filtered_metadata.tsv'):
         self.metadata = self._read_metadata(data_path)
 
     @staticmethod
     def _read_metadata(data_path):
         gtdb_metadata = pd.read_csv(data_path, sep='\t', index_col='accession')
-        # Extract family from the taxonomy string
-        gtdb_metadata['family'] = gtdb_metadata['gtdb_taxonomy'].str.extract(
-            r';f__([^;]+);g__'
-        )
+        gtdb_metadata['family'] = gtdb_metadata['gtdb_taxonomy'].str.extract(r';f__([^;]+);g__')
+        gtdb_metadata['species'] = gtdb_metadata['gtdb_taxonomy'].str.extract(r';s__([^;]+)$')
         return gtdb_metadata
 
     def accessions_from_family(self, family: str):

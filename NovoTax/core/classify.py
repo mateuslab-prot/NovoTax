@@ -20,7 +20,7 @@ from NovoTax.core.mmseqs_search import mmseqs_easy_search
 from NovoTax.dbs.ncbi import NCBIProteomeDownloader
 
 
-SELECTED_REPS_DB = Path("/home/desv/manuscripts/denovo/mmseqs_dbs/selected_reps")
+SELECTED_REPS_DB = Path("/home/desv/opt/NovoTax_r1/NovoTax/assets/gtdb/GTDB_r226_extended_genus_reps")
 CRAP_DB = Path("/home/desv/manuscripts/denovo/mmseqs_dbs/crap")
 GTDB_PROTEIN_DIR = Path("/data/dbs/gtdb/release226/proteins/protein_faa_reps/bacteria/")
 
@@ -325,6 +325,7 @@ def write_genus_score_plot(
     score_points: list[tuple[str, float, bool]],
     threshold: float,
     output_path: Path,
+    gtdb: GTDB,
 ) -> None:
     ensure_parent(output_path)
 
@@ -340,10 +341,24 @@ def write_genus_score_plot(
         plt.plot(x, y, linestyle=":", marker="o")
         plt.axhline(threshold, linestyle="--", linewidth=1)
 
-        for xi, yi, (label, _, accepted) in zip(x, y, score_points):
+        for xi, yi, (accession, _, accepted) in zip(x, y, score_points):
+            species = "unknown species"
+
+            if accession in gtdb.metadata.index:
+                value = gtdb.metadata.at[accession, "species"]
+                if isinstance(value, str) and value:
+                    species = value
+            else:
+                for candidate in (f"RS_{accession}", f"GB_{accession}"):
+                    if candidate in gtdb.metadata.index:
+                        value = gtdb.metadata.at[candidate, "species"]
+                        if isinstance(value, str) and value:
+                            species = value
+                        break
+
             suffix = "" if accepted else " (filtered)"
             plt.annotate(
-                f"{label}{suffix}",
+                f"{accession} - {species}{suffix}",
                 xy=(xi, yi),
                 xytext=(6, 4),
                 textcoords="offset points",
@@ -886,7 +901,7 @@ def main(
                         out.write(message)
 
         write_concatenated_strains_fasta(found_strain_accessions, downloader, paths)
-        write_genus_score_plot(genus_score_points, genus_score, paths.genus_plot_path)
+        write_genus_score_plot(genus_score_points, genus_score, paths.genus_plot_path, gtdb)
 
     finally:
         cleanup_work_dir(paths)
