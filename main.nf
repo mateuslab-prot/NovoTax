@@ -210,6 +210,9 @@ process RUN_CASCADIA_WITH_MODEL {
 
     mkdir -p "${sample_name}"
 
+    export NUMBA_CACHE_DIR="\$WORKDIR/.numba_cache"
+    mkdir -p "\$NUMBA_CACHE_DIR"
+
     cascadia sequence "${input_file}" "${cascadia_model_file}" -o "${sample_name}/${sample_name}_cascadia"
     cp "${sample_name}/${sample_name}_cascadia.ssl" "${sample_name}/denovo.tsv"
     """
@@ -232,6 +235,9 @@ process RUN_CASCADIA_DEFAULT_MODEL {
     set -euo pipefail
 
     mkdir -p "${sample_name}"
+
+    export NUMBA_CACHE_DIR="\$WORKDIR/.numba_cache"
+    mkdir -p "\$NUMBA_CACHE_DIR"
 
     cascadia sequence "${input_file}" "/opt/models/cascadia.ckpt" -o "${sample_name}/${sample_name}_cascadia"
     cp "${sample_name}/${sample_name}_cascadia.ssl" "${sample_name}/denovo.tsv"
