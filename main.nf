@@ -126,7 +126,7 @@ process RUN_XUANJINOVO_WITH_MODEL {
 
     input:
     tuple val(sample_name), path(peak_file), val(data_format)
-    path model_file
+    path xuanjinovo_model_file
 
     output:
     tuple val(sample_name), path("${sample_name}/denovo.tsv")
@@ -136,7 +136,7 @@ process RUN_XUANJINOVO_WITH_MODEL {
 
     script:
     def peak_name  = peak_file.getName()
-    def model_name = model_file.getName()
+    def model_name = xuanjinovo_model_file.getName()
 
     """
     set -euo pipefail
