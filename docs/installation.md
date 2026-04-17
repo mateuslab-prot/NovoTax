@@ -160,7 +160,16 @@ docker run --rm --gpus all nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
 
 ## 4. Setting up NovoTax
 
-### Genus database
+### Cloning NovoTax
+For full flexibility we recommend cloning NovoTax to your local system and work from within this directory:
+```bash
+git clone https://github.com/mateuslab-prot/NovoTax/
+```
+```bash
+cd NovoTax
+```
+
+### Build genus database
 NovoTax uses [**GTDB**](https://gtdb.ecogenomic.org) as the database for proteomes and phylogenetic information. To run NovoTax, this database first needs to be prepared. Then, the path to the database is supplied with the `--gtdb_dir PATH` flag.
 
 1. Go to [GTDB downloads](https://gtdb.ecogenomic.org/downloads) and select the mirror best suited to you.
@@ -185,7 +194,7 @@ rm gtdb_proteins_aa_reps_r226.tar.gz
 ### Building the genus representatives database
 The genus representatives database is now ready to be constructed (please make sure you **use the profile and paths appropriate for your system**):
 ```bash
-nextflow run main.nf -profile docker_gpu --create_dbs ./novotax_db --gtdb_protein_reps /data/dbs/gtdb/release226/protein_faa_reps --gtdb_release 226
+nextflow run main.nf --create_dbs novotax_db_r226 --gtdb_protein_reps /data/dbs/gtdb/release226/protein_faa_reps --gtdb_release 226
 ```
 Example output on success:  
 <img src="../assets/images/nextflow_db_creation_output.png" alt="Nextflow database creation output example">
@@ -194,20 +203,12 @@ Example output on success:
 ## 5. Test with example data
 If the environment is working correctly, you can run a short demo using example data. Doing this will also download all the containers required to run NovoTax, making subsequent runs quicker to run.
 
-1. Clone the NovoTax repository:
-```bash
-git clone https://github.com/mateuslab-prot/NovoTax/
-```
-2. Move into the repository:
-```bash
-cd NovoTax
-```
-3. Run NovoTax on the example data using the profile that matches your environment
+Run NovoTax on the example data using the profile that matches your environment
     - `-profile apptainer_gpu` **(default)**: Apptainer on Ubuntu using GPU
     - `-profile apptainer_wsl_gpu`: Apptainer on WSL using GPU
     - `-profile docker_gpu`: Docker on Ubuntu/WSL using GPU
 ```bash
-nextflow run main.nf -profile apptainer_wsl_gpu --gtdb_dir PATH
+nextflow run main.nf -profile apptainer_wsl_gpu --input examples/samples.tsv --output_dir example_results/ --gtdb_protein_reps /data/dbs/gtdb/release226/protein_faa_reps --gtdb_db_dir novotax_db_r226
 ```
 **Note that the first NovoTax run will take a longer time due to first having to retrieve all the containers. Expect the download to take 10-15 minutes and then the demo files takes roughly ~5 minutes to run on a modern desktop GPU.**
 
