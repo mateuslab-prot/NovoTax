@@ -28,7 +28,7 @@ bash scripts/setup_example_data.sh
 
 The example can then be run, [after making sure you set the appropriate flags and paths for your system](usage.md#flags), with:
 ```bash
-nextflow run main.nf -profile apptainer_wsl_gpu --input example/samples_extended.tsv --output_dir example_results/ --gtdb_protein_reps /data/dbs/gtdb/release226/protein_faa_reps --gtdb_db_dir novotax_db_r226
+nextflow run main.nf -profile apptainer_wsl_gpu --input examples/samples_extended.tsv --output_dir example_results/ --gtdb_protein_reps /data/dbs/gtdb/release226/protein_faa_reps --gtdb_db_dir novotax_db_r226
 ```
 
 ## Expected output
