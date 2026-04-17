@@ -46,10 +46,12 @@ def ncbiApiKey = coalesce(params.ncbi_api_key, params.novotax_ncbi_api_key)
 def genusScore = coalesce(params.genus_score, params.novotax_genus_score) ?: 1275
 def maxIterations = coalesce(params.max_iterations, params.novotax_max_iterations) ?: 20
 def maxStrains = coalesce(params.max_strains, params.novotax_max_strains) ?: 1000
+def cacheDirPath = absolutePathOrNull(params.cache_dir ?: '.novotax_cache')
 
 def runningCreateDbs = createDbsPath != null
 
 new File(outputDirPath).mkdirs()
+new File(cacheDirPath).mkdirs()
 
 if (runningCreateDbs) {
     if (gtdbProteinRepsPath == null) {
