@@ -1,9 +1,5 @@
 # NovoTax: prokaryotic strain identification from mass spectrometry-based proteomics data
 
-
-## Under final revision
-Thank you for your interest in NovoTax! We're very excited about releasing the full pipeline as soon as possible and hope to have it out by the end of the week. Check back soon!
-
 ## What is NovoTax?
 
 <img src="assets/images/workflow.png" alt="NovoTax workflow" height="500">
@@ -65,13 +61,38 @@ nextflow run main.nf \
 ```
 
 ## Output
-
-NovoTax outputs several files during runtime.
-* `$SAMPLE_NAME/$SAMPLE_NAME_cascadia.ssl` - Cascadia predictions.
-* `$SAMPLE_NAME/$SAMPLE_NAME_xuanjinovo.tsv`- XuanjiNovo preditions.
-* `$SAMPLE_NAME/$SAMPLE_NAME_unique_peptides.txt`- All unique peptides predicted, for [Unipept](https://unipept.ugent.be/) or other downstream analysis.
-* `$SAMPLE_NAME/$SAMPLE_NAME_novotax_species.tsv` - [GTDB](https://gtdb.ecogenomic.org/) accessions and taxonomy for all species predicted to be in the sample, including a relative score.
-* `$SAMPLE_NAME/$SAMPLE_NAME_database.fasta` - Concatenated fasta file for all species predicted by NovoTax to be in the sample for downstream analysis.
+NovoTax creates one folder for each experiment, creating a folder structure as follows:
+```
+├── experiment1_dda
+│   ├── file1
+│   │   ├── file1_db.fasta              # Fasta file for all strains found in file
+│   │   ├── file1_peptides.txt          # All unique peptides with score over threshold found in file
+│   │   ├── file1_xuanjinovo.tsv        # Raw output of de novo predictions for file
+│   │   ├── strain_hits.png             # Quality control plots showing strain scoring for file
+│   │   └── strain_hits.tsv             # Taxonomy, GTDB accessions and score for each strain found in file
+│   ├── file2
+│   │   ├── file2_db.fasta
+│   │   ├── file2_peptides.txt
+│   │   ├── file2_xuanjinovo.tsv
+│   │   ├── strain_hits.png
+│   │   └── strain_hits.tsv
+│   ├── concat_xuanjinovo.tsv           # Concatenated raw output of de novo predictions for experiment
+│   ├── experiment1_peptides.txt        # All unique peptides with score over threshold found in experiment
+│   ├── experiment1_db.fasta            # Fasta file for all strains found in experiment
+│   ├── strain_hits.png                 # Quality control plots showing strain scoring for experiment
+│   └── strain_hits.tsv                 # Taxonomy, GTDB accessions and score for each strain found in experiment
+└── experiment2_dia
+    ├── file3
+    │   ├── file3_cascadia.ssl          # Raw output of de novo predictions for file
+    │   ├── file3_db.fasta
+    │   ├── strain_hits.png
+    │   └── strain_hits.tsv
+    ├── concat_cascadia.ssl             # Concatenated raw output of de novo predictions for experiment
+    ├── experiment2_peptides.txt
+    ├── experiment2_db.fasta
+    ├── strain_hits.png
+    └── strain_hits.tsv
+```
 
 
 ## Cite
