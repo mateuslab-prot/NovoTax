@@ -7,6 +7,7 @@ For data-dependent acquisition XuanjiNovo is used.
 
 ### Changes
 * Docker entrypoint changed to be compatible with Nextflow
+* Enforce single GPU use due to bug with multi GPU use on some systems
 
 ### Cite
 Jun A, Zhang X, et al.  
