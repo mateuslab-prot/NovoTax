@@ -154,7 +154,6 @@ process RUN_XUANJINOVO_WITH_MODEL {
 
     cp "\$OUT_DIR/denovo.tsv" "${sample_name}/denovo.tsv"
     """
-}""
 }
 
 process RUN_XUANJINOVO_DEFAULT_MODEL {
