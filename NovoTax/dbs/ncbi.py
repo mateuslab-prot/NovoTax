@@ -1,11 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sun Nov 23 23:27:34 2025
-
-@author: densv
-
-Download proteomes from NCBI using the Datasets CLI.
-"""
+#!/usr/bin/env python3
 
 from __future__ import annotations
 
@@ -24,20 +17,12 @@ log = logging.getLogger(__name__)
 
 @dataclass
 class AssemblyTag:
-    """Mapping between user tag and NCBI assembly accession.
-
-    Examples
-    --------
-    'GB_GCA_017510985.1' -> tag='GB_GCA_017510985.1', assembly='GCA_017510985.1'
-    'GCF_000001405.40'   -> tag='GCF_000001405.40',   assembly='GCF_000001405.40'
-    """
-    tag: str       # user-visible ID, used for filenames, may contain RS_/GB_
-    assembly: str  # bare NCBI assembly accession, used for NCBI Datasets CLI
+    tag: str
+    assembly: str
 
 
 @dataclass
 class ProteomeResult:
-    """Per-accession result of proteome retrieval."""
     tag: str
     assembly: str
     source: str  # 'gtdb', 'ncbi', 'skipped_existing', 'ncbi_no_data', 'missing', 'error'
@@ -46,22 +31,6 @@ class ProteomeResult:
 
 
 class NCBIProteomeDownloader:
-    """Download proteome FASTA files from NCBI, with optional GTDB shortcut.
-
-    Parameters
-    ----------
-    datasets_cmd : str, optional
-        Name or path of the `datasets` command. Default: 'datasets'.
-    api_key : str, optional
-        NCBI API key. If provided, passed as `--api-key`. You can also set
-        the environment variable NCBI_API_KEY and omit this argument.
-
-    Notes
-    -----
-    - All output filenames are '<tag>.faa', where 'tag' is the accession
-      string you pass in, e.g. 'GB_GCA_017510985.1.faa'.
-    - If an output file already exists, it is left as-is and not overwritten.
-    """
 
     def __init__(self, datasets_cmd: str = "datasets", api_key: Optional[str] = None):
         self.datasets_cmd = datasets_cmd
@@ -73,9 +42,6 @@ class NCBIProteomeDownloader:
                 "Install it and ensure the 'datasets' command is available."
             )
 
-    # ------------------------------------------------------------------ #
-    # Public API
-    # ------------------------------------------------------------------ #
 
     def download_proteomes(
         self,
@@ -85,36 +51,9 @@ class NCBIProteomeDownloader:
         keep_dehydrated_zips: bool = False,
         gtdb_dir: str | Path | None = None,
     ) -> Dict[str, ProteomeResult]:
-        """Download proteomes for a list of accessions.
-
-        Parameters
-        ----------
-        accessions : iterable of str
-            Accessions can be:
-            - bare NCBI assemblies: 'GCF_000001405.40', 'GCA_017510985.1'
-            - GTDB-style: 'RS_GCF_000001405.40', 'GB_GCA_017510985.1'
-        out_dir : str or Path
-            Directory where '<tag>.faa' files will be written.
-        batch_size : int, optional
-            Number of accessions to process per NCBI dehydrate/rehydrate batch.
-        keep_dehydrated_zips : bool, optional
-            If True, dehydrated batch ZIPs are copied into `out_dir` for archival.
-        gtdb_dir : str or Path, optional
-            Directory containing GTDB proteomes named like
-            'GB_GCA_017510985.1_protein.faa.gz' (or '.faa'). If provided,
-            this directory is checked first:
-            - if a match is found, it is copied/decompressed to '<tag>.faa'
-            - otherwise, it is downloaded from NCBI.
-
-        Returns
-        -------
-        Dict[str, ProteomeResult]
-            Mapping from tag -> result, with status and path/message.
-        """
         out_dir = Path(out_dir)
         out_dir.mkdir(parents=True, exist_ok=True)
 
-        # Clean and validate accession list
         acc_list: List[str] = [a.strip() for a in accessions if a and a.strip()]
         if not acc_list:
             raise ValueError("No accessions provided.")
@@ -123,7 +62,6 @@ class NCBIProteomeDownloader:
 
         results: Dict[str, ProteomeResult] = {}
 
-        # First: optionally take everything we can from GTDB
         need_ncbi: List[AssemblyTag] = []
         from_gtdb = 0
 
@@ -149,7 +87,6 @@ class NCBIProteomeDownloader:
             len(need_ncbi),
         )
 
-        # Second: download remaining via NCBI Datasets (dehydrate/rehydrate)
         for i in range(0, len(need_ncbi), batch_size):
             batch = need_ncbi[i : i + batch_size]
             log.info(
@@ -165,48 +102,21 @@ class NCBIProteomeDownloader:
                 keep_dehydrated_zips=keep_dehydrated_zips,
             )
             for r in batch_results:
-                # Don't overwrite GTDB results.
                 if r.tag not in results or results[r.tag].source == "error":
                     results[r.tag] = r
 
         return results
 
-    # ------------------------------------------------------------------ #
-    # Internal helpers
-    # ------------------------------------------------------------------ #
 
     def _normalize_accession(self, acc: str) -> AssemblyTag:
-        """Convert user accession to AssemblyTag.
-
-        - If it starts with 'RS_' or 'GB_' we treat that as a GTDB prefix and
-          strip it off to get the NCBI assembly accession used with Datasets.
-        - Otherwise, we assume it's already an NCBI assembly accession.
-        """
         acc = acc.strip()
         if acc.startswith(("RS_", "GB_")):
-            # Split on first underscore only: 'GB_GCA_0175...' -> ['GB', 'GCA_0175...']
             _prefix, rest = acc.split("_", 1)
             return AssemblyTag(tag=acc, assembly=rest)
         else:
             return AssemblyTag(tag=acc, assembly=acc)
 
     def _try_copy_from_gtdb(self, tag: AssemblyTag, gtdb_dir: Path, out_dir: Path) -> Optional[ProteomeResult]:
-        """Try to satisfy this accession from a GTDB proteome directory.
-
-        Looks for files named (in this order):
-
-        - '<tag>_protein.faa.gz'
-        - '<tag>_protein.faa'
-        - '<tag>.faa.gz'
-        - '<tag>.faa'
-
-        If found, copies (and decompresses if .gz) to '<tag>.faa' in out_dir.
-
-        Returns
-        -------
-        ProteomeResult or None
-            Result if GTDB file found, otherwise None.
-        """
         import gzip
 
         base = tag.tag
@@ -259,11 +169,6 @@ class NCBIProteomeDownloader:
         )
 
     def _run_datasets(self, args: List[str], cwd: Optional[Path] = None) -> subprocess.CompletedProcess:
-        """Run a `datasets` subcommand and return the completed process.
-
-        NOTE: This no longer raises by itself; callers decide how to handle
-        non-zero return codes.
-        """
         cmd = [self.datasets_cmd] + args
         log.debug("Running command: %s", " ".join(cmd))
 
@@ -288,26 +193,17 @@ class NCBIProteomeDownloader:
         out_dir: Path,
         keep_dehydrated_zips: bool,
     ) -> List[ProteomeResult]:
-        """Download and collect proteomes for a batch of accessions via NCBI.
-
-        Returns
-        -------
-        List[ProteomeResult]
-            One result per accession in the batch.
-        """
         results: List[ProteomeResult] = []
 
         with tempfile.TemporaryDirectory(prefix="ncbi_proteomes_") as tmp:
             tmp_path = Path(tmp)
 
-            # 1) Write accessions.txt (bare assembly IDs only)
             acc_file = tmp_path / "accessions.txt"
             acc_file.write_text(
                 "\n".join(t.assembly for t in batch) + "\n",
                 encoding="utf-8",
             )
 
-            # 2) Download dehydrated data package zip
             zip_path = tmp_path / "dehydrated.zip"
 
             dl_args = [
@@ -350,7 +246,6 @@ class NCBIProteomeDownloader:
                     )
                 return results
 
-            # 3) Unzip dehydrated package
             unzip_dir = tmp_path / "unzipped"
             unzip_dir.mkdir(parents=True, exist_ok=True)
 
@@ -378,8 +273,6 @@ class NCBIProteomeDownloader:
             data_dir = ncbi_dataset_root / "data"
             fetch_txt = ncbi_dataset_root / "fetch.txt"
 
-            # 4) If there's nothing to rehydrate (no fetch.txt), we interpret
-            #    this as "no protein data available" for these assemblies.
             if not fetch_txt.exists():
                 msg = (
                     "NCBI Datasets produced no 'fetch.txt' for this batch. "
@@ -401,10 +294,8 @@ class NCBIProteomeDownloader:
                             message=msg,
                         )
                     )
-                # We skip rehydrate entirely and continue with other batches.
                 return results
 
-            # 5) Rehydrate to fetch actual data files (protein FASTA)
             rh_args = [
                 "rehydrate",
                 "--directory",
@@ -426,7 +317,6 @@ class NCBIProteomeDownloader:
                     dest = out_dir / f"{t.tag}.faa"
                     source = "error"
                     if dest.exists():
-                        # In case some files actually got created
                         source = "ncbi"
                     results.append(
                         ProteomeResult(
@@ -439,7 +329,6 @@ class NCBIProteomeDownloader:
                     )
                 return results
 
-            # 6) Collect protein.faa files and copy/rename them
             if not data_dir.exists():
                 msg = (
                     f"Unexpected datasets layout: '{data_dir}' not found. "
@@ -517,7 +406,6 @@ class NCBIProteomeDownloader:
                     )
                 )
 
-            # 7) Optionally keep the dehydrated zip as an archive
             if keep_dehydrated_zips and batch:
                 first = batch[0].tag
                 last = batch[-1].tag
@@ -528,9 +416,6 @@ class NCBIProteomeDownloader:
         return results
 
 
-# ----------------------------------------------------------------------
-# Simple CLI interface
-# ----------------------------------------------------------------------
 def _parse_args(argv=None):
     import argparse
 
@@ -650,7 +535,6 @@ def main(argv=None):
         n_error,
     )
 
-    # Exit code: 0 if everything ok, 1 if any missing/no_data or errors
     if n_error > 0 or n_missing > 0:
         sys.exit(1)
     else:

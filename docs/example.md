@@ -1,39 +1,39 @@
-# Running NovoTax
+# Example run
 
-The base command for running NovoTax is `nextflow run mateuslab-prot/novotax`. To control the input, output and models used, the following flags are available:
+## Data
 
-**Mandatory**  
-`-i / --input` - Path to .tsv file containing your sample inputs, [see **input** section below](#data-preparation)  
-`-o / --output_dir` - Directory that results will be written to  
+The following example contains all the commands to run a subset of the analysis performed in the paper. They were chosen to be representative of the different datatypes (DDA / DIA) and different findings. It consists of five files:
+* **Biodiversity_C_Baltica_T240_R3_Inf_27Jan16_Arwen_15-07-13.mgf** - From [PXD010000](https://www.ebi.ac.uk/pride/archive/projects/PXD010000), DDA data with no detected contamination
+* **Biodiversity_HL93_HLHfructose_aerobic_3_09Jun16_Pippin_16-03-39.mgf** - From [PXD010000](https://www.ebi.ac.uk/pride/archive/projects/), DDA data with two species detected (one probable contamination)
+* **Biodiversity_P_ruminicola_MDM_anaerobic_1_09Jun16_Pippin_16-03-39.mgf** - From [PXD010000](https://www.ebi.ac.uk/pride/archive/projects/), DDA data with multiple species detected as probable contamination 
+* **20181112_QX8_PhGe_SA_EasyLC12-14_B_a8_221_TP96hrs_control_rep1.mzML** & **20181112_QX8_PhGe_SA_EasyLC12-12_B_a6_222_TP96hrs_control_rep2.mzML** - From [PXD036445](https://www.ebi.ac.uk/pride/archive/projects/PXD036445), DIA data from complex community. Highlights using multiple files from one experiment.
 
-**Optional**  
-`--xuanjinovo_model_file` - Path to a XuanjiNovo model file, [see **models** section below](#models)  
-`--cascadia_model_file`- Path to a Cascadia model file, [see **models** section below](#models)
+These files are [deposited to Zenodo](https://zenodo.org/records/19495971) and will be downloaded when running the example script.
 
-## Input
+## Running the example
+First, please [verify that the environment is working correctly](installation.md#3-verify-the-environment-with-gpu-support) and [that the databases are setup](installation.md#4-setting-up-novotax).
 
-NovoTax is made to accept a list of sample names, file paths and data format using a tab separated (.tsv) file. DDA data to be sequenced using XuanjiNovo is required to be in .mgf format while DIA data to be sequenced with Cascadia requires the data to be in .mzML format. We recommend [msconvert](https://proteowizard.sourceforge.io/tools/msconvert.html) to convert raw data into the appropriate formats.
+To run the example a convenience script is provided that:
+* Downloads the files [listed above](#data)
+* Performs the full NovoTax pipeline
+    * De novo prediction of peptides
+    * Database matching against GTDB
 
-| sample_name     | file_path                                | data_format |
-|-----------------|------------------------------------------|-------------|
-| XuanjiNovo_demo | /full/path/to/folder/demo_xuanjinovo.mgf | dda         |
-| Cascadia_demo   | /full/path/to/folder/demo_cascadia.mzML  | dia         |
+A guide showing the expected output and analysis of this is also included below.
 
-## Models
-**XuanjiNovo**: The `XuanjiNovo_130M_massnet_massivekb.ckpt` model finetuned on 30M MassiveKB is included in the XuanjiNovo image. A different model can be used with  `--model_file MODEL_FILE_PATH`.
+Start by downloading the data:
+```bash
+bash scripts/setup_example_data.sh
+```
 
-**Cascadia**: The base `Cascadia.ckpt` model is included in the Cascadia image. A different model can be used with `--cascadia_model_file MODEL_FILE_PATH`.
+The example can then be run, [after making sure you set the appropriate flags and paths for your system](usage.md#flags), with:
+```bash
+nextflow run main.nf -profile apptainer_wsl_gpu --input examples/samples_extended.tsv --output_dir extended_example_results/ --gtdb_protein_reps /data/dbs/gtdb/release226/protein_faa_reps --gtdb_db_dir novotax_db_r226
+```
 
-## Databases
-TODO: Update Zenodo / LFS DOIs
+## Expected output
 
-## Output
-NovoTax outputs several files during runtime.
-* `$SAMPLE_NAME/$SAMPLE_NAME_cascadia.ssl` - Cascadia predictions.
-* `$SAMPLE_NAME/$SAMPLE_NAME_xuanjinovo.tsv`- XuanjiNovo preditions.
-* `$SAMPLE_NAME/$SAMPLE_NAME_unique_peptides.txt`- All unique peptides predicted, for Unipept or other downstream analysis.
-* `$SAMPLE_NAME/$SAMPLE_NAME_novotax_species.tsv` - GTDB accessions and taxonomy for all species predicted to be in the sample, including a relative score.
-* `$SAMPLE_NAME/$SAMPLE_NAME_database.fasta` - Concatenated fasta file for all species predicted by NovoTax to be in the sample for downstream analysis.
-
-## Tools used in NovoTax
-For a more detailed view on the tools used in NovoTax please refer to the [tools section](tools.md).
+```bash
+$ nextflow run main.nf -profile docker --create_dbs ./novotax_db --gtdb_protein_rep_dir /data/dbs/gtdb/release232/
+```
+<img src="../assets/images/nextflow_db_creation_output.png" alt="Nextflow database creation output example">

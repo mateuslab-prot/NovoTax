@@ -22,6 +22,8 @@ test_run/
 data/
 tmp/
 temp/
+results/
+scripts/data/
 
 # OS / editors
 .DS_Store

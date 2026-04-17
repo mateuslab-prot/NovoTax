@@ -1,27 +1,26 @@
 # Installation
 
-NovoTax runs as a **Nextflow** pipeline and uses modular **containers** for its software environment.
+NovoTax runs as a [**Nextflow**]((https://www.nextflow.io)) pipeline and uses modular **container images** for its software environment.
 
 To run NovoTax locally, the following tools are needed:
 
 - [**Nextflow**](https://www.nextflow.io)
-- [**Docker**](https://www.docker.com) or [**Apptainer**](https://apptainer.org)
+- [**Apptainer**](https://apptainer.org) or [**Docker**](https://www.docker.com)
 
 ## Supported environment
 
 NovoTax is intended to run on:
 
 - **Windows through WSL2**
-    - To install Windows Subsystem for Linus (WSL), follow the [official guide](https://learn.microsoft.com/en-us/windows/wsl/install)
+    - To install Windows Subsystem for Linus (WSL), please follow the [official guide](https://learn.microsoft.com/en-us/windows/wsl/install)
 - **Ubuntu**
 
 
-macOS is not supported due to hardware limitations for the de novo sequencers.
+macOS is not supported due to hardware limitations for de novo sequencers.
 
 ## 0. System preparation
 
-Ensure that all package channels are up-to-date
-
+Ensure that all package channels are up-to-date:
 ```bash
 sudo apt update
 ```
@@ -41,29 +40,25 @@ Nextflow requires Java 17 (or later, up to 26). Check which version of Java you 
 ```bash
 java -version
 ```
-
-If you don't have a compatible version of Java installed, it is recommended that you install it through SDKMAN.
-
-1. If needed, install Java 17 or newer using your system package manager or a JDK distribution of your choice. For example, using
+If needed, install Java 17 or newer using your system package manager or a JDK distribution of your choice. For example, using:
 ```bash
 sudo apt install -y openjdk-17-jre-headless
 ```
-2. Confirm Java is installed correctly:
+Confirm Java is installed correctly:
 ```bash
 java -version
 ```
 
 ### Install Nextflow
-1. Download Nextflow:
+Download Nextflow:
 ```bash
 curl -s https://get.nextflow.io | bash
 ```
-2. Make Nextflow executable:
+Make Nextflow executable:
 ```bash
 chmod +x nextflow
 ```
-
-3. Move Nextflow into an executable path. For example:
+Move Nextflow into an executable path. For example:
 ```bash
 sudo mv nextflow /usr/local/bin/
 ```
@@ -76,7 +71,7 @@ nextflow -version
 
 ## 2. Container platform
 
-NovoTax utilises containerisation for reproducability and modularity. There's two main container platforms supported, Apptainer and Docker. If Docker is already installed and working (`docker --version`) we recommend continuing using that. If this is the first time you use containers or work in an HPC environment we instead recommend Apptainer due to easier installation and usage.
+NovoTax utilises containerisation for reproducability and modularity. There's two main container platforms supported, Apptainer and Docker. If Docker is already installed [and working](#22-docker) we recommend continuing using that. If this is the first time you use containers or work in an HPC environment we instead recommend Apptainer due to easier installation and usage.
 
 ## 2.1 Apptainer
 
@@ -129,7 +124,7 @@ apptainer exec --nv docker://nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
 ```bash
 apptainer exec --nvccli docker://nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
 ```
-If nvidia-smi shows the systems GPU details the Apptainer installation is working correctly with the systems GPUs. You can move on to [verify the setup](#3-verify-the-environment-with-gpu).
+If nvidia-smi shows the systems GPU details the Apptainer installation is working correctly with the systems GPUs. You can move on to [verify the setup](#3-verify-the-environment-with-gpu-support) below.
 
 ## 2.2 Docker
 If you prefer to run Docker, or Docker is already installed on your system, this is also supported. Please make sure that your docker installation can access the systems GPUs with:
@@ -163,31 +158,63 @@ apptainer exec --nv --nvccli docker://nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia
 docker run --rm --gpus all nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
 ```
 
+## 4. Setting up NovoTax
 
-
-
-## NovoTax demo
-
-If the environment is working correctly, you can run a short demo using example data. Doing this will also download all the containers required to run NovoTax, making subsequent runs quicker to run.
-
-1. Clone the NovoTax repository:
+### Cloning NovoTax
+For full flexibility we recommend cloning NovoTax to your local system and work from within this directory:
 ```bash
 git clone https://github.com/mateuslab-prot/NovoTax/
 ```
-2. Move into the repository:
 ```bash
 cd NovoTax
 ```
-3. Run NovoTax on the example data using the profile that matches your environment
-    - Default (no profile flag): Apptainer on Ubuntu using GPU
+
+### Build genus database
+NovoTax uses [**GTDB**](https://gtdb.ecogenomic.org) as the database for proteomes and phylogenetic information. To run NovoTax, this database first needs to be prepared. Then, the path to the database is supplied with the `--gtdb_dir PATH` flag.
+
+1. Go to [GTDB downloads](https://gtdb.ecogenomic.org/downloads) and select the mirror best suited to you.
+2. Choose the release you want to use. For the analysis made in the NovoTax paper **r226** was used, but for best coverage we recommend using the latest release (at the time of writing **r232**).
+3. Go to `genomic_files_reps` and download the `gtdb_proteins_aa_reps_r226.tar.gz` (**87.5GB**) or equivalent file for your chosen release. Or directly from the terminal using your prefered tool, for example:
+```bash
+wget https://data.gtdb.ecogenomic.org/releases/release226/226.0/genomic_files_reps/gtdb_proteins_aa_reps_r226.tar.gz
+```
+4. Extract the files:
+```bash
+tar xzf gtdb_proteins_aa_reps_r226.tar.gz
+```
+5. Bacteria and archaea are seperated by default, combine them into one folder:
+```bash
+find protein_faa_reps/{bacteria,archaea} -maxdepth 1 -type f -name '*.faa.gz' -exec mv -t protein_faa_reps {} +
+``` 
+6. Remove the archive:
+```bash
+rm gtdb_proteins_aa_reps_r226.tar.gz
+````
+
+### Building the genus representatives database
+The genus representatives database is now ready to be constructed (please make sure you [**use the profile and paths appropriate for your system**](usage.md#flags)):
+```bash
+nextflow run main.nf --create_dbs novotax_db_r226 --gtdb_protein_reps /data/dbs/gtdb/release226/protein_faa_reps --gtdb_release 226
+```
+Example output on success:  
+<img src="../assets/images/nextflow_db_creation_output.png" alt="Nextflow database creation output example">
+
+## 5. Test with example data
+If the environment is working correctly, you can run a short demo using example data. Doing this will also download all the containers required to run NovoTax, making subsequent runs quicker to run.
+
+Run NovoTax on the example data using the profile that matches your environment
+    - `-profile apptainer_gpu` **(default)**: Apptainer on Ubuntu using GPU
     - `-profile apptainer_wsl_gpu`: Apptainer on WSL using GPU
     - `-profile docker_gpu`: Docker on Ubuntu/WSL using GPU
 ```bash
-nextflow run main.nf
+nextflow run main.nf -profile apptainer_wsl_gpu --input examples/samples.tsv --output_dir example_results/ --gtdb_protein_reps /data/dbs/gtdb/release226/protein_faa_reps --gtdb_db_dir novotax_db_r226
 ```
+
+<img src="../assets/images/nextflow_novotax_output.png" alt="Nextflow NovoTax output example">
+
 **Note that the first NovoTax run will take a longer time due to first having to retrieve all the containers. Expect the download to take 10-15 minutes and then the demo files takes roughly ~5 minutes to run on a modern desktop GPU.**
 
-The results will be written to the folder `demo_results/`. For more details on the outputs generated by NovoTax, please read the [output section](example.md#output) of the documentation.
+The results will be written to the folder `demo_results/`. For more details on the outputs generated by NovoTax, please read the [output section](usage.md#output) of the documentation.
 
 ## Running NovoTax
-You're now ready to run [NovoTax on your own data](example.md)!
+You're now ready to run [NovoTax on your own data](usage.md)!

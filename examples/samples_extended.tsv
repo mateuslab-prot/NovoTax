@@ -1,0 +1,6 @@
+sample_name	file_path	data_format
+PXD010000_C_Baltica	data/Biodiversity_C_Baltica_T240_R3_Inf_27Jan16_Arwen_15-07-13.mgf	 dda
+PXD010000_HL93	data/Biodiversity_HL93_HLHfructose_aerobic_3_09Jun16_Pippin_16-03-39.mgf	dda
+PXD010000_P_ruminicola	data/Biodiversity_P_ruminicola_MDM_anaerobic_1_09Jun16_Pippin_16-03-39.mgf	dda
+PXD036445_96hrs_control_1	data/20181112_QX8_PhGe_SA_EasyLC12-14_B_a8_221_TP96hrs_control_rep1.mzML	dia
+PXD036445_96hrs_control_2	data/20181112_QX8_PhGe_SA_EasyLC12-12_B_a6_222_TP96hrs_control_rep2.mzML	dia
