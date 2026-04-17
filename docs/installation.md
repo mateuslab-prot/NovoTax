@@ -192,7 +192,7 @@ rm gtdb_proteins_aa_reps_r226.tar.gz
 ````
 
 ### Building the genus representatives database
-The genus representatives database is now ready to be constructed (please make sure you **use the profile and paths appropriate for your system**):
+The genus representatives database is now ready to be constructed (please make sure you [**use the profile and paths appropriate for your system**](usage.md#flags)):
 ```bash
 nextflow run main.nf --create_dbs novotax_db_r226 --gtdb_protein_reps /data/dbs/gtdb/release226/protein_faa_reps --gtdb_release 226
 ```
