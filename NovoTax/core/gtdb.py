@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import pandas as pd
 import re
 
@@ -5,7 +7,7 @@ def strip_accession_prefix(accession: str) -> str:
     return re.sub(r'^(RS_|GB_)', '', accession)
 
 class GTDB:
-    def __init__(self, data_path='/home/desv/opt/NovoTax_r1/NovoTax/assets/gtdb/GTDB_r226_filtered_metadata.tsv'):
+    def __init__(self, data_path=''):
         self.metadata = self._read_metadata(data_path)
 
     @staticmethod

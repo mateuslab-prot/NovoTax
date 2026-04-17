@@ -1,7 +1,9 @@
+#!/usr/bin/env python3
+
 from __future__ import annotations
 
 import argparse
-from collections.abc import Iterable, Mapping
+from collections.abc import Mapping
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 import subprocess
@@ -10,12 +12,7 @@ from typing import Iterator, Tuple
 from tqdm import tqdm
 
 
-# ---------------------------------------------------------------------------
-# Existing helpers from your original script (unchanged)
-# ---------------------------------------------------------------------------
-
 def run_command(cmd: list[str], cwd: str | Path | None = None) -> subprocess.CompletedProcess:
-    """Run a shell command and raise a clear error if it fails."""
     try:
         result = subprocess.run(
             cmd,
@@ -36,10 +33,6 @@ def run_command(cmd: list[str], cwd: str | Path | None = None) -> subprocess.Com
 
 
 def read_fasta(path: str | Path) -> dict[str, str]:
-    """
-    Read a FASTA file into a dict: {header_without_>: sequence}.
-    Sequences are concatenated into a single string per record.
-    """
     path = Path(path)
     sequences: dict[str, str] = {}
 
@@ -50,18 +43,16 @@ def read_fasta(path: str | Path) -> dict[str, str]:
         for raw_line in tqdm(fh, desc=f"Reading {path.name}"):
             line = raw_line.strip()
             if not line:
-                continue  # skip empty lines
+                continue
 
             if line.startswith(">"):
-                # flush previous record
                 if header is not None:
                     sequences[header] = "".join(chunks)
-                header = line[1:]  # keep full header (minus '>')
+                header = line[1:]
                 chunks = []
             else:
                 chunks.append(line)
 
-        # flush last record
         if header is not None:
             sequences[header] = "".join(chunks)
 
@@ -69,9 +60,6 @@ def read_fasta(path: str | Path) -> dict[str, str]:
 
 
 def process_proteins(proteins: Mapping[str, str]) -> dict[str, str]:
-    """
-    Return a new dict with all 'I' replaced by 'L' in each sequence.
-    """
     return {name: seq.replace("I", "L") for name, seq in proteins.items()}
 
 
@@ -81,12 +69,6 @@ def write_fasta(
     line_width: int | None = 60,
     reverse: bool | None = False,
 ) -> None:
-    """
-    Write a dict {header: sequence} to a FASTA file.
-
-    By default, wraps sequences at `line_width` characters.
-    Set line_width=None to write each sequence as a single line.
-    """
     path = Path(path)
 
     with path.open("w") as out:
@@ -117,11 +99,6 @@ def build_mmseqs_db(
     db_dir: str | Path = "",
     mmseqs_bin: str = "mmseqs",
 ) -> Path:
-    """
-    Run: mmseqs createdb <fasta_file> <db_dir/db_name>
-
-    Returns the path prefix of the created MMseqs database.
-    """
     fasta_file = Path(fasta_file)
     db_dir = Path(db_dir)
     db_dir.mkdir(parents=True, exist_ok=True)
@@ -140,17 +117,7 @@ def build_mmseqs_db(
     return db_path
 
 
-# ---------------------------------------------------------------------------
-# New streaming FASTA reader & writer helpers
-# ---------------------------------------------------------------------------
-
 def iter_fasta_records(path: str | Path) -> Iterator[Tuple[str, str]]:
-    """
-    Stream FASTA records from a file.
-
-    Yields:
-        (header_without_>, sequence_string)
-    """
     path = Path(path)
     header: str | None = None
     chunks: list[str] = []
@@ -188,19 +155,9 @@ def _write_single_record(
             out_handle.write(seq[i : i + line_width] + "\n")
 
 
-# ---------------------------------------------------------------------------
-# Folder → single-output FASTA logic
-# ---------------------------------------------------------------------------
-
 def _process_single_file_for_parallel(
     file_path: Path,
 ) -> list[tuple[str, str]]:
-    """
-    Helper for parallel mode.
-
-    Reads one FASTA file into memory, applies I->L, renames headers,
-    and returns a list of (new_header, seq) tuples.
-    """
     ncbi_accession = file_path.stem
     proteins = read_fasta(file_path)
     processed = process_proteins(proteins)
@@ -221,37 +178,6 @@ def process_fasta_folder_to_single(
     parallel: bool = False,
     workers: int | None = None,
 ) -> None:
-    """
-    Process all FASTA files in `folder` matching `pattern` and write them
-    into a single FASTA file `output_fasta`.
-
-    For each input file:
-        - ncbi_accession is taken from the file stem, e.g. "GCA_017398805.1"
-        - protein_accession is the first token of the FASTA header,
-          e.g. "MBR5393444.1" from:
-              >MBR5393444.1 MAG: hypothetical protein ...
-
-        New header is: f"{ncbi_accession}_{protein_accession}"
-
-    Sequences are processed with process_proteins (I->L).
-
-    Parameters
-    ----------
-    folder:
-        Directory containing *.faa files.
-    output_fasta:
-        Path to the combined output FASTA file.
-    pattern:
-        Glob pattern for input files (default: "*.faa").
-    line_width:
-        Wrap width for sequences (default: None => single-line sequences).
-    parallel:
-        If True, process files in parallel using multiple processes.
-        Note: parallel mode reads each file into memory in one go.
-    workers:
-        Number of worker processes for parallel mode (default: None =>
-        uses ProcessPoolExecutor default).
-    """
     folder = Path(folder)
     output_fasta = Path(output_fasta)
 
@@ -260,10 +186,9 @@ def process_fasta_folder_to_single(
         raise FileNotFoundError(f"No files matching '{pattern}' in {folder}")
 
     if line_width is None:
-        line_width = None  # explicit for clarity
+        line_width = None
 
     if not parallel:
-        # Pure streaming, very low memory usage (only one record at a time).
         with output_fasta.open("w") as out:
             for file_path in tqdm(files, desc="Processing FASTA files (sequential)"):
                 ncbi_accession = file_path.stem
@@ -274,8 +199,6 @@ def process_fasta_folder_to_single(
                     processed_seq = seq.replace("I", "L")
                     _write_single_record(out, new_header, processed_seq, line_width)
     else:
-        # Parallel mode: one process per file (or per worker slot).
-        # Each worker returns a list of (header, seq); we then stream-write them.
         with output_fasta.open("w") as out:
             with ProcessPoolExecutor(max_workers=workers) as ex:
                 futures = {
@@ -293,9 +216,6 @@ def process_fasta_folder_to_single(
                         _write_single_record(out, header, seq, line_width)
 
 
-# ---------------------------------------------------------------------------
-# Optional CLI entrypoint (so you can also run it as a script)
-# ---------------------------------------------------------------------------
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
