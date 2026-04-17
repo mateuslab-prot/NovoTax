@@ -1,5 +1,7 @@
 # NovoTax: prokaryotic strain identification from mass spectrometry-based proteomics data
 
+Welcome! If you find any issues with this first release, please do not hesitate to open an issue or contact us directly (`dennis.svedberg at umu.se`)
+
 ## What is NovoTax?
 
 <img src="assets/images/workflow.png" alt="NovoTax workflow" height="500">
