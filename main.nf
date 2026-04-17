@@ -133,22 +133,28 @@ process RUN_XUANJINOVO_WITH_MODEL {
     data_format == 'dda'
 
     script:
+    def peak_name  = peak_file.getName()
+    def model_name = model_file.getName()
+
     """
     set -euo pipefail
+    WORKDIR="\$(pwd)"
+    OUT_DIR="\$WORKDIR/${sample_name}_xuanjinovo"
 
-    mkdir -p "${sample_name}" "${sample_name}_xuanjinovo"
+    mkdir -p "${sample_name}"
 
-    export NUMBA_CACHE_DIR="\$(pwd)/.numba_cache"
+    export NUMBA_CACHE_DIR="\$WORKDIR/.numba_cache"
     mkdir -p "\$NUMBA_CACHE_DIR"
 
     python -m XuanjiNovo.XuanjiNovo \
       --mode=${params.mode} \
-      --peak_path="${peak_file}" \
-      --model="${model_file}" \
-      --output="${sample_name}_xuanjinovo"
+      --peak_path="\$WORKDIR/${peak_name}" \
+      --model="\$WORKDIR/${model_name}" \
+      --output="\$OUT_DIR"
 
-    cp "${sample_name}_xuanjinovo/denovo.tsv" "${sample_name}/denovo.tsv"
+    cp "\$OUT_DIR/denovo.tsv" "${sample_name}/denovo.tsv"
     """
+}""
 }
 
 process RUN_XUANJINOVO_DEFAULT_MODEL {
@@ -164,21 +170,25 @@ process RUN_XUANJINOVO_DEFAULT_MODEL {
     data_format == 'dda'
 
     script:
+    def peak_name = peak_file.getName()
+
     """
     set -euo pipefail
+    WORKDIR="\$(pwd)"
+    OUT_DIR="\$WORKDIR/${sample_name}_xuanjinovo"
 
-    mkdir -p "${sample_name}" "${sample_name}_xuanjinovo"
+    mkdir -p "${sample_name}"
 
-    export NUMBA_CACHE_DIR="\$(pwd)/.numba_cache"
+    export NUMBA_CACHE_DIR="\$WORKDIR/.numba_cache"
     mkdir -p "\$NUMBA_CACHE_DIR"
 
     python -m XuanjiNovo.XuanjiNovo \
       --mode=${params.mode} \
-      --peak_path="${peak_file}" \
+      --peak_path="\$WORKDIR/${peak_name}" \
       --model="/opt/models/XuanjiNovo_130M_massnet_massivekb.ckpt" \
-      --output="${sample_name}_xuanjinovo"
+      --output="\$OUT_DIR"
 
-    cp "${sample_name}_xuanjinovo/denovo.tsv" "${sample_name}/denovo.tsv"
+    cp "\$OUT_DIR/denovo.tsv" "${sample_name}/denovo.tsv"
     """
 }
 
