@@ -1,88 +1,120 @@
 nextflow.enable.dsl=2
 
-def createDbsPath = params.create_dbs != null
-    ? new File(params.create_dbs.toString()).absolutePath
-    : null
 
-def gtdbProteinRepDirPath = params.gtdb_protein_rep_dir != null
-    ? new File(params.gtdb_protein_rep_dir.toString()).absolutePath
-    : null
+def coalesce(value, fallback) {
+    value != null ? value : fallback
+}
 
-if( params.create_dbs != null ) {
+
+def absolutePathOrNull(value) {
+    value != null ? new File(value.toString()).absolutePath : null
+}
+
+
+def requireExistingFile(pathValue, label) {
+    def candidate = file(pathValue)
+    if (!candidate.exists() || !candidate.isFile()) {
+        error "${label} not found: ${pathValue}"
+    }
+}
+
+
+def requireExistingDirectory(pathValue, label, requireNonEmpty = false) {
+    def candidate = new File(pathValue.toString())
+    if (!candidate.exists()) {
+        error "${label} not found: ${pathValue}"
+    }
+    if (!candidate.isDirectory()) {
+        error "${label} is not a directory: ${pathValue}"
+    }
+    if (requireNonEmpty && ((candidate.listFiles() ?: []) as List).isEmpty()) {
+        error "${label} is empty: ${pathValue}"
+    }
+}
+
+
+def createDbsPath = absolutePathOrNull(params.create_dbs)
+def inputPath = absolutePathOrNull(coalesce(params.input, params.samplesheet))
+def outputDirPath = absolutePathOrNull(coalesce(params.output_dir, params.outdir) ?: './results')
+def xuanjiModelPath = absolutePathOrNull(coalesce(params.xuanjinovo_model_file, params.model_file))
+def cascadiaModelPath = absolutePathOrNull(params.cascadia_model_file)
+def gtdbDbDirPath = absolutePathOrNull(coalesce(params.gtdb_db_dir, params.novotax_db_path))
+def gtdbProteinRepsPath = absolutePathOrNull(coalesce(params.gtdb_protein_reps, params.gtdb_protein_dir))
+def filterHostPath = absolutePathOrNull(coalesce(params.filter_host, params.novotax_filter_host))
+def filterContaminants = coalesce(params.filter_contaminants, params.novotax_filter_contaminants)
+def ncbiApiKey = coalesce(params.ncbi_api_key, params.novotax_ncbi_api_key)
+def genusScore = coalesce(params.genus_score, params.novotax_genus_score) ?: 1275
+def maxIterations = coalesce(params.max_iterations, params.novotax_max_iterations) ?: 20
+def maxStrains = coalesce(params.max_strains, params.novotax_max_strains) ?: 1000
+
+def runningCreateDbs = createDbsPath != null
+
+new File(outputDirPath).mkdirs()
+
+if (runningCreateDbs) {
+    if (gtdbProteinRepsPath == null) {
+        error "When running create-dbs, you must provide --gtdb_protein_reps"
+    }
+
     def createDbsTarget = new File(createDbsPath)
-
-    if( createDbsTarget.exists() && !createDbsTarget.isDirectory() ) {
-        error "--create_dbs must point to a directory path, not a file: ${params.create_dbs}"
+    if (createDbsTarget.exists() && !createDbsTarget.isDirectory()) {
+        error "--create_dbs must point to a directory path, not a file: ${createDbsPath}"
     }
 
-    if( params.gtdb_protein_rep_dir == null ) {
-        error "When running --create_dbs, you must provide --gtdb_protein_rep_dir"
+    requireExistingDirectory(gtdbProteinRepsPath, 'GTDB representative protein directory', true)
+} else {
+    if (inputPath == null) {
+        error "When running the full workflow, you must provide --input"
+    }
+    requireExistingFile(inputPath, 'Input sample sheet')
+
+    if (xuanjiModelPath != null) {
+        requireExistingFile(xuanjiModelPath, 'XuanjiNovo model file')
+    }
+    if (cascadiaModelPath != null) {
+        requireExistingFile(cascadiaModelPath, 'Cascadia model file')
     }
 
-    def gtdbProteinRepDir = new File(gtdbProteinRepDirPath)
-
-    if( !gtdbProteinRepDir.exists() ) {
-        error "GTDB protein representative directory not found: ${params.gtdb_protein_rep_dir}"
+    if (gtdbDbDirPath == null) {
+        error "When running classification, you must provide --gtdb_db_dir"
+    }
+    if (gtdbProteinRepsPath == null) {
+        error "When running classification, you must provide --gtdb_protein_reps"
     }
 
-    if( !gtdbProteinRepDir.isDirectory() ) {
-        error "GTDB protein representative path is not a directory: ${params.gtdb_protein_rep_dir}"
-    }
+    requireExistingDirectory(gtdbDbDirPath, 'GTDB database directory', true)
+    requireExistingDirectory(gtdbProteinRepsPath, 'GTDB representative protein directory', true)
 
-    def gtdbProteinRepDirContents = gtdbProteinRepDir.list()
-    if( gtdbProteinRepDirContents == null || gtdbProteinRepDirContents.length == 0 ) {
-        error "GTDB protein representative directory is empty: ${params.gtdb_protein_rep_dir}"
-    }
-}
-else {
-    if( params.samplesheet == null ) {
-        error "When running classification, you must provide --samplesheet"
-    }
-
-    if( params.model_file != null && !file(params.model_file).exists() ) {
-        error "XuanjiNovo model file not found: ${params.model_file}"
-    }
-
-    if( params.cascadia_model_file != null && !file(params.cascadia_model_file).exists() ) {
-        error "Cascadia model file not found: ${params.cascadia_model_file}"
-    }
-
-    if( params.novotax_db_path == null ) {
-        error "When running classification, you must provide --novotax_db_path"
-    }
-
-    if( !file(params.novotax_db_path).exists() ) {
-        error "NovoTax DB directory not found: ${params.novotax_db_path}"
-    }
-
-    if( params.novotax_filter_host != null && !file(params.novotax_filter_host).exists() ) {
-        error "NovoTax host filter path not found: ${params.novotax_filter_host}"
+    if (filterHostPath != null) {
+        def hostCandidate = file(filterHostPath)
+        if (!hostCandidate.exists()) {
+            error "Host filter path not found: ${filterHostPath}"
+        }
     }
 }
 
-if( params.create_dbs == null ) {
+if (!runningCreateDbs) {
     Channel
-        .fromPath(params.samplesheet, checkIfExists: true)
+        .fromPath(inputPath, checkIfExists: true)
         .splitCsv(header: true, sep: '\t')
         .map { row ->
-            def sample_name = row.sample_name?.toString()?.trim()
-            def file_path   = row.file_path?.toString()?.trim()
-            def data_format = row.data_format?.toString()?.trim()?.toLowerCase()
+            def sampleName = row.sample_name?.toString()?.trim()
+            def filePath = row.file_path?.toString()?.trim()
+            def dataFormat = row.data_format?.toString()?.trim()?.toLowerCase()
 
-            if( !sample_name || !file_path || !data_format ) {
-                error "Each row in samples.tsv must contain sample_name, file_path, and data_format"
+            if (!sampleName || !filePath || !dataFormat) {
+                error "Each row in the input TSV must contain sample_name, file_path, and data_format"
+            }
+            if (!(dataFormat in ['dda', 'dia'])) {
+                error "Unsupported data_format '${dataFormat}' for sample '${sampleName}'. Supported values: dda, dia"
             }
 
-            if( !(data_format in ['dda', 'dia']) ) {
-                error "Unsupported data_format '${data_format}' for sample '${sample_name}'. Supported values: dda, dia"
+            def inputFile = file(filePath)
+            if (!inputFile.exists()) {
+                error "Input file not found for sample '${sampleName}': ${filePath}"
             }
 
-            def input_file = file(file_path)
-            if( !input_file.exists() ) {
-                error "Input file not found for sample '${sample_name}': ${file_path}"
-            }
-
-            tuple(sample_name, input_file, data_format)
+            tuple(sampleName, inputFile, dataFormat)
         }
         .set { samples_ch }
 }
@@ -90,244 +122,212 @@ if( params.create_dbs == null ) {
 process RUN_XUANJINOVO_WITH_MODEL {
     tag { sample_name }
 
-    publishDir { "${params.outdir}/${sample_name}" }, mode: 'copy'
-
     input:
     tuple val(sample_name), path(peak_file), val(data_format)
     path model_file
 
     output:
-    tuple val(sample_name), path("${sample_name}_xuanjinovo.tsv"), val(data_format)
+    tuple val(sample_name), path("${sample_name}/denovo.tsv")
 
     when:
     data_format == 'dda'
 
     script:
-    def peak_name  = peak_file.getName()
-    def model_name = model_file.getName()
-
     """
     set -euo pipefail
-    WORKDIR="\$(pwd)"
-    OUT_DIR="\$WORKDIR/${sample_name}_xuanjinovo"
 
-    export NUMBA_CACHE_DIR="\$WORKDIR/.numba_cache"
+    mkdir -p "${sample_name}" "${sample_name}_xuanjinovo"
+
+    export NUMBA_CACHE_DIR="\$(pwd)/.numba_cache"
     mkdir -p "\$NUMBA_CACHE_DIR"
 
     python -m XuanjiNovo.XuanjiNovo \
       --mode=${params.mode} \
-      --peak_path="\$WORKDIR/${peak_name}" \
-      --model="\$WORKDIR/${model_name}" \
-      --output="\$OUT_DIR"
+      --peak_path="${peak_file}" \
+      --model="${model_file}" \
+      --output="${sample_name}_xuanjinovo"
 
-    cp "\$OUT_DIR/denovo.tsv" "\$WORKDIR/${sample_name}_xuanjinovo.tsv"
+    cp "${sample_name}_xuanjinovo/denovo.tsv" "${sample_name}/denovo.tsv"
     """
 }
 
 process RUN_XUANJINOVO_DEFAULT_MODEL {
     tag { sample_name }
 
-    publishDir { "${params.outdir}/${sample_name}" }, mode: 'copy'
-
     input:
     tuple val(sample_name), path(peak_file), val(data_format)
 
     output:
-    tuple val(sample_name), path("${sample_name}_xuanjinovo.tsv"), val(data_format)
+    tuple val(sample_name), path("${sample_name}/denovo.tsv")
 
     when:
     data_format == 'dda'
 
     script:
-    def peak_name = peak_file.getName()
-
     """
     set -euo pipefail
-    WORKDIR="\$(pwd)"
-    OUT_DIR="\$WORKDIR/${sample_name}_xuanjinovo"
 
-    export NUMBA_CACHE_DIR="\$WORKDIR/.numba_cache"
+    mkdir -p "${sample_name}" "${sample_name}_xuanjinovo"
+
+    export NUMBA_CACHE_DIR="\$(pwd)/.numba_cache"
     mkdir -p "\$NUMBA_CACHE_DIR"
 
     python -m XuanjiNovo.XuanjiNovo \
       --mode=${params.mode} \
-      --peak_path="\$WORKDIR/${peak_name}" \
+      --peak_path="${peak_file}" \
       --model="/opt/models/XuanjiNovo_130M_massnet_massivekb.ckpt" \
-      --output="\$OUT_DIR"
+      --output="${sample_name}_xuanjinovo"
 
-    cp "\$OUT_DIR/denovo.tsv" "\$WORKDIR/${sample_name}_xuanjinovo.tsv"
+    cp "${sample_name}_xuanjinovo/denovo.tsv" "${sample_name}/denovo.tsv"
     """
 }
 
 process RUN_CASCADIA_WITH_MODEL {
     tag { sample_name }
 
-    publishDir { "${params.outdir}/${sample_name}" }, mode: 'copy'
-
     input:
     tuple val(sample_name), path(input_file), val(data_format)
     path cascadia_model_file
 
     output:
-    tuple val(sample_name), path("${sample_name}_cascadia.ssl"), val(data_format)
+    tuple val(sample_name), path("${sample_name}/denovo.tsv")
 
     when:
     data_format == 'dia'
 
     script:
-    def input_name = input_file.getName()
-    def model_name = cascadia_model_file.getName()
-
     """
     set -euo pipefail
-    WORKDIR="\$(pwd)"
 
-    cascadia sequence "\$WORKDIR/${input_name}" "\$WORKDIR/${model_name}" -o "\$WORKDIR/${sample_name}_cascadia"
+    mkdir -p "${sample_name}"
+
+    cascadia sequence "${input_file}" "${cascadia_model_file}" -o "${sample_name}/${sample_name}_cascadia"
+    cp "${sample_name}/${sample_name}_cascadia.ssl" "${sample_name}/denovo.tsv"
     """
 }
 
 process RUN_CASCADIA_DEFAULT_MODEL {
     tag { sample_name }
 
-    publishDir { "${params.outdir}/${sample_name}" }, mode: 'copy'
-
     input:
     tuple val(sample_name), path(input_file), val(data_format)
 
     output:
-    tuple val(sample_name), path("${sample_name}_cascadia.ssl"), val(data_format)
+    tuple val(sample_name), path("${sample_name}/denovo.tsv")
 
     when:
     data_format == 'dia'
 
     script:
-    def input_name = input_file.getName()
-
     """
     set -euo pipefail
-    WORKDIR="\$(pwd)"
 
-    cascadia sequence "\$WORKDIR/${input_name}" "/opt/models/cascadia.ckpt" -o "\$WORKDIR/${sample_name}_cascadia"
+    mkdir -p "${sample_name}"
+
+    cascadia sequence "${input_file}" "/opt/models/cascadia.ckpt" -o "${sample_name}/${sample_name}_cascadia"
+    cp "${sample_name}/${sample_name}_cascadia.ssl" "${sample_name}/denovo.tsv"
     """
 }
 
 process RUN_NOVOTAX {
     tag { sample_name }
 
-    publishDir { "${params.outdir}" }, mode: 'copy'
+    publishDir { outputDirPath }, mode: 'copy'
 
     input:
-    tuple val(sample_name), path(result_file), val(data_format)
-    path novotax_db_dir
-    path host_filter_file
-    val host_filter_arg
+    tuple val(sample_name), path(denovo_file)
+    path gtdb_db_dir
+    path gtdb_protein_reps
+    path host_filter_path
+    val use_host_filter
 
     output:
-    tuple val(sample_name), path("novotax_out/${sample_name}")
+    tuple val(sample_name), path("${sample_name}")
 
     script:
-    def result_name = result_file.getName()
-    def db_dir_name = novotax_db_dir.getName()
-    def filterContArg = params.novotax_filter_contaminants ? '--filter_contaminants true' : '--filter_contaminants false'
-    def ncbiApiArg = params.novotax_ncbi_api_key ? "--ncbi_api_key \"${params.novotax_ncbi_api_key}\"" : ""
+    def filterContArg = filterContaminants ? '--filter_contaminants true' : '--filter_contaminants false'
+    def filterHostArg = use_host_filter ? "--filter_host \"${host_filter_path}\"" : ''
+    def ncbiApiArg = ncbiApiKey ? "--ncbi_api_key \"${ncbiApiKey}\"" : ''
 
     """
     set -euo pipefail
 
-    WORKDIR="\$(pwd)"
-    OUT_ROOT="\$WORKDIR/novotax_out"
-
-    mkdir -p "\$OUT_ROOT"
-    rm -rf "\$WORKDIR/mmseqs_dbs"
-    ln -s "\$WORKDIR/${db_dir_name}" "\$WORKDIR/mmseqs_dbs"
-
-    python -m NovoTax.cli classify "\$WORKDIR/${result_name}" \\
-      -o "\$OUT_ROOT" \\
-      ${filterContArg} \\
-      ${host_filter_arg} \\
-      ${ncbiApiArg} \\
-      --genus_score ${params.novotax_genus_score} \\
-      --max_iterations ${params.novotax_max_iterations} \\
-      --max_strains ${params.novotax_max_strains}
+    python -u -m NovoTax.cli classify "${denovo_file}" \
+      --output_dir . \
+      --gtdb-db-dir "${gtdb_db_dir}" \
+      --gtdb-protein-reps "${gtdb_protein_reps}" \
+      ${filterContArg} \
+      ${filterHostArg} \
+      ${ncbiApiArg} \
+      --genus_score ${genusScore} \
+      --max_iterations ${maxIterations} \
+      --max_strains ${maxStrains}
     """
 }
 
 process CREATE_NOVOTAX_DBS {
-    tag "create_dbs"
+    tag 'create_dbs'
 
-    publishDir { params.create_dbs }, mode: 'copy', overwrite: true
+    publishDir { createDbsPath }, mode: 'copy'
 
     input:
     val gtdb_release
-    path gtdb_protein_rep_dir
+    path gtdb_protein_reps
 
     output:
-    path("GTDB_r${gtdb_release}_filtered_metadata.tsv")
-    path("GTDB_r${gtdb_release}_extended_genus_reps*")
+    path('GTDB_r*_filtered_metadata.tsv')
+    path('GTDB_r*_extended_genus_reps*')
 
     script:
-    def stagedProteinRepDirName = gtdb_protein_rep_dir.getName()
-
     """
     set -euo pipefail
 
-    python -m NovoTax.cli create-dbs "\$PWD" \\
-      --gtdb-release ${gtdb_release} \\
-      --gtdb-protein-rep-dir "\$PWD/${stagedProteinRepDirName}"
+    python -u -m NovoTax.cli create-dbs . \
+      --gtdb-protein-reps "${gtdb_protein_reps}" \
+      --gtdb-release ${gtdb_release}
     """
 }
 
 workflow {
-    if( params.create_dbs != null ) {
+    if (runningCreateDbs) {
         CREATE_NOVOTAX_DBS(
-            Channel.value(params.gtdb_release),
-            Channel.value(file(gtdbProteinRepDirPath, checkIfExists: true))
+            Channel.value(params.gtdb_release ?: 226),
+            Channel.value(file(gtdbProteinRepsPath))
         )
-    }
-    else {
-        dda_samples_ch = samples_ch.filter { sample_name, input_file, data_format ->
-            data_format == 'dda'
-        }
+    } else {
+        def dda_samples_ch = samples_ch.filter { sample_name, input_file, data_format -> data_format == 'dda' }
+        def dia_samples_ch = samples_ch.filter { sample_name, input_file, data_format -> data_format == 'dia' }
 
-        xuanjinovo_results = params.model_file != null
+        def xuanjinovo_results = xuanjiModelPath != null
             ? RUN_XUANJINOVO_WITH_MODEL(
                 dda_samples_ch,
-                Channel.value(file(params.model_file))
-              )
+                Channel.value(file(xuanjiModelPath))
+            )
             : RUN_XUANJINOVO_DEFAULT_MODEL(dda_samples_ch)
 
-        dia_samples_ch = samples_ch.filter { sample_name, input_file, data_format ->
-            data_format == 'dia'
-        }
-
-        cascadia_results = params.cascadia_model_file != null
+        def cascadia_results = cascadiaModelPath != null
             ? RUN_CASCADIA_WITH_MODEL(
                 dia_samples_ch,
-                Channel.value(file(params.cascadia_model_file))
-              )
+                Channel.value(file(cascadiaModelPath))
+            )
             : RUN_CASCADIA_DEFAULT_MODEL(dia_samples_ch)
 
-        all_results = xuanjinovo_results.mix(cascadia_results)
-        novotax_db_ch = Channel.value(file(params.novotax_db_path))
-
-        dummy_host_file = file("${projectDir}/assets/no_host_filter.txt")
-        host_filter_file_ch = Channel.value(
-            params.novotax_filter_host != null
-                ? file(params.novotax_filter_host)
-                : dummy_host_file
+        def all_results = xuanjinovo_results.mix(cascadia_results)
+        def gtdb_db_dir_ch = Channel.value(file(gtdbDbDirPath))
+        def gtdb_protein_reps_ch = Channel.value(file(gtdbProteinRepsPath))
+        def host_filter_file_ch = Channel.value(
+            filterHostPath != null
+                ? file(filterHostPath)
+                : file("${projectDir}/assets/no_host_filter.txt")
         )
-
-        host_filter_arg_ch = Channel.value(
-            params.novotax_filter_host != null
-                ? "--filter_host \"\$(pwd)/${file(params.novotax_filter_host).getName()}\""
-                : ""
-        )
+        def use_host_filter_ch = Channel.value(filterHostPath != null)
 
         RUN_NOVOTAX(
             all_results,
-            novotax_db_ch,
+            gtdb_db_dir_ch,
+            gtdb_protein_reps_ch,
             host_filter_file_ch,
-            host_filter_arg_ch
+            use_host_filter_ch
         )
     }
 }

@@ -23,3 +23,7 @@ A guide showing the expected output and analysis of this is also included below.
 
 ## Expected output
 
+```bash
+$ nextflow run main.nf -profile docker --create_dbs ./novotax_db --gtdb_protein_rep_dir /data/dbs/gtdb/release232/
+```
+<img src="../assets/images/nextflow_db_creation_output.png" alt="Nextflow database creation output example">

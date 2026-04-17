@@ -164,8 +164,8 @@ docker run --rm --gpus all nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
 NovoTax uses [**GTDB**](https://gtdb.ecogenomic.org) as the database for proteomes and phylogenetic information. To run NovoTax, this database first needs to be prepared. Then, the path to the database is supplied with the `--gtdb_dir PATH` flag.
 
 1. Go to [GTDB downloads](https://gtdb.ecogenomic.org/downloads) and select the mirror best suited to you.
-2. Choose the release you want to use. For the analysis made in the NovoTax paper r226 was used, but for best coverage we recommend using the latest release (at the time of writing r232).
-3. Go to `genomic_files_reps` and download the `gtdb_proteins_aa_reps_r226.tar.gz` or equivalent file for your chosen release. Or directly from the terminal using your prefered tool, for example:
+2. Choose the release you want to use. For the analysis made in the NovoTax paper **r226** was used, but for best coverage we recommend using the latest release (at the time of writing **r232**).
+3. Go to `genomic_files_reps` and download the `gtdb_proteins_aa_reps_r226.tar.gz` (**87.5GB**) or equivalent file for your chosen release. Or directly from the terminal using your prefered tool, for example:
 ```bash
 wget https://data.gtdb.ecogenomic.org/releases/release226/226.0/genomic_files_reps/gtdb_proteins_aa_reps_r226.tar.gz
 ```
@@ -177,12 +177,19 @@ tar xzf gtdb_proteins_aa_reps_r226.tar.gz
 ```bash
 find protein_faa_reps/{bacteria,archaea} -maxdepth 1 -type f -name '*.faa.gz' -exec mv -t protein_faa_reps {} +
 ``` 
-
-### Building the genus database
-The database can also be built from scratch using GTDB data. This can be useful if you for example want to use a different [**GTDB release**](https://gtdb.ecogenomic.org/stats/r232).
+6. Remove the archive:
 ```bash
-nextflow run mateuslab-prot/novotax -create-dbs PATH
+rm gtdb_proteins_aa_reps_r226.tar.gz
+````
+
+### Building the genus representatives database
+The genus representatives database is now ready to be constructed (please make sure you **use the profile and paths appropriate for your system**):
+```bash
+$ nextflow run main.nf -profile docker --create_dbs ./novotax_db --gtdb_protein_rep_dir /data/dbs/gtdb/release232/
 ```
+Expected output:  
+<img src="../assets/images/nextflow_db_creation_output.png" alt="Nextflow database creation output example">
+
 
 ## 5. Test with example data
 If the environment is working correctly, you can run a short demo using example data. Doing this will also download all the containers required to run NovoTax, making subsequent runs quicker to run.

@@ -1,8 +1,7 @@
-#!/usr/bin/env python3
-
 from __future__ import annotations
 
 import argparse
+import inspect
 from pathlib import Path
 
 
@@ -25,16 +24,28 @@ def positive_int(value: str) -> int:
     return parsed
 
 
-def existing_nonempty_dir(value: str) -> Path:
+def existing_dir(value: str) -> Path:
     path = Path(value).expanduser().resolve()
 
     if not path.exists():
         raise argparse.ArgumentTypeError(f"Directory does not exist: {path}")
     if not path.is_dir():
         raise argparse.ArgumentTypeError(f"Expected a directory path: {path}")
+
+    return path
+
+
+def existing_nonempty_dir(value: str) -> Path:
+    path = existing_dir(value)
     if not any(path.iterdir()):
         raise argparse.ArgumentTypeError(f"Directory is empty: {path}")
+    return path
 
+
+def existing_path(value: str) -> Path:
+    path = Path(value).expanduser().resolve()
+    if not path.exists():
+        raise argparse.ArgumentTypeError(f"Path does not exist: {path}")
     return path
 
 
@@ -56,7 +67,9 @@ def build_parser() -> argparse.ArgumentParser:
         help="Directory where NovoTax database files should be written",
     )
     create_dbs_parser.add_argument(
+        "--gtdb-protein-reps",
         "--gtdb-protein-rep-dir",
+        dest="gtdb_protein_reps",
         type=existing_nonempty_dir,
         required=True,
         help=(
@@ -73,12 +86,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     classify_parser = subparsers.add_parser(
         "classify",
-        help="Run classification on the given input file",
+        help="Run classification on the given de novo peptide result file",
     )
     classify_parser.add_argument(
         "filepath",
-        type=Path,
-        help="Input file to classify",
+        type=existing_path,
+        help="Input de novo peptide result file to classify",
     )
     classify_parser.add_argument(
         "-o",
@@ -86,6 +99,27 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         default=Path("/out"),
         help="Directory where classification results and run artifacts should be written",
+    )
+    classify_parser.add_argument(
+        "--gtdb-db-dir",
+        "--gtdb-data-dir",
+        dest="gtdb_db_dir",
+        type=existing_nonempty_dir,
+        required=True,
+        help=(
+            "Path to the NovoTax GTDB database directory produced by create-dbs. "
+            "This directory must exist and must not be empty."
+        ),
+    )
+    classify_parser.add_argument(
+        "--gtdb-protein-reps",
+        dest="gtdb_protein_reps",
+        type=existing_nonempty_dir,
+        required=True,
+        help=(
+            "Path to the GTDB representative protein FASTA directory. "
+            "This directory must exist and must not be empty."
+        ),
     )
     classify_parser.add_argument(
         "--filter_contaminants",
@@ -96,7 +130,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     classify_parser.add_argument(
         "--filter_host",
-        type=Path,
+        type=existing_path,
         default=None,
         help="Path to host FASTA file or directory of FASTA files to build and filter against",
     )
@@ -113,13 +147,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     classify_parser.add_argument(
         "--max_iterations",
-        type=int,
+        type=positive_int,
         default=20,
         help="Maximum number of strain-identification iterations (default: 20)",
     )
     classify_parser.add_argument(
         "--max_strains",
-        type=int,
+        type=positive_int,
         default=1000,
         help="Maximum number of strains downloaded per species (default: 1000)",
     )
@@ -130,7 +164,7 @@ def build_parser() -> argparse.ArgumentParser:
 def run_create_dbs(
     output_dir: Path,
     gtdb_release: int,
-    gtdb_protein_rep_dir: Path,
+    gtdb_protein_reps: Path,
 ) -> None:
     from NovoTax.dbs.construct_databases import main as construct_databases_main
 
@@ -139,16 +173,24 @@ def run_create_dbs(
         raise NotADirectoryError(f"Output path exists and is not a directory: {output_dir}")
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    construct_databases_main(
-        output_dir=output_dir,
-        gtdb_release=gtdb_release,
-        gtdb_protein_rep_dir=gtdb_protein_rep_dir,
-    )
+    parameters = inspect.signature(construct_databases_main).parameters
+    kwargs = {
+        "output_dir": output_dir,
+        "gtdb_release": gtdb_release,
+    }
+    if "gtdb_protein_rep_dir" in parameters:
+        kwargs["gtdb_protein_rep_dir"] = gtdb_protein_reps
+    else:
+        kwargs["gtdb_protein_dir"] = gtdb_protein_reps
+
+    construct_databases_main(**kwargs)
 
 
 def run_classify(
     filepath: Path,
     output_dir: Path,
+    gtdb_db_dir: Path,
+    gtdb_protein_reps: Path,
     filter_contaminants: bool,
     filter_host: Path | None,
     ncbi_api_key: str | None,
@@ -158,18 +200,21 @@ def run_classify(
 ) -> None:
     from NovoTax.core.classify import main as classify_main
 
-    filepath = filepath.resolve()
-    if not filepath.exists():
-        raise FileNotFoundError(f"Input file does not exist: {filepath}")
+    filepath = filepath.expanduser().resolve()
+    output_dir = output_dir.expanduser().resolve()
+    gtdb_db_dir = gtdb_db_dir.expanduser().resolve()
+    gtdb_protein_reps = gtdb_protein_reps.expanduser().resolve()
 
     if filter_host is not None:
-        filter_host = filter_host.resolve()
-        if not filter_host.exists():
-            raise FileNotFoundError(f"Host filter path does not exist: {filter_host}")
+        filter_host = filter_host.expanduser().resolve()
+
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     classify_main(
         filepath=filepath,
         output_dir=output_dir,
+        gtdb_db_dir=gtdb_db_dir,
+        gtdb_protein_reps=gtdb_protein_reps,
         filter_contaminants=filter_contaminants,
         filter_host=filter_host,
         ncbi_api_key=ncbi_api_key,
@@ -187,7 +232,7 @@ def main() -> None:
         run_create_dbs(
             output_dir=args.output_dir,
             gtdb_release=args.gtdb_release,
-            gtdb_protein_rep_dir=args.gtdb_protein_rep_dir,
+            gtdb_protein_reps=args.gtdb_protein_reps,
         )
         return
 
@@ -195,6 +240,8 @@ def main() -> None:
         run_classify(
             filepath=args.filepath,
             output_dir=args.output_dir,
+            gtdb_db_dir=args.gtdb_db_dir,
+            gtdb_protein_reps=args.gtdb_protein_reps,
             filter_contaminants=args.filter_contaminants,
             filter_host=args.filter_host,
             ncbi_api_key=args.ncbi_api_key,
