@@ -150,7 +150,8 @@ process RUN_XUANJINOVO_WITH_MODEL {
       --mode=${params.mode} \
       --peak_path="\$WORKDIR/${peak_name}" \
       --model="\$WORKDIR/${model_name}" \
-      --output="\$OUT_DIR"
+      --output="\$OUT_DIR" \
+      --gpu="0"
 
     cp "\$OUT_DIR/denovo.tsv" "${sample_name}/denovo.tsv"
     """
@@ -185,7 +186,8 @@ process RUN_XUANJINOVO_DEFAULT_MODEL {
       --mode=${params.mode} \
       --peak_path="\$WORKDIR/${peak_name}" \
       --model="/opt/models/XuanjiNovo_130M_massnet_massivekb.ckpt" \
-      --output="\$OUT_DIR"
+      --output="\$OUT_DIR" \
+      --gpu="0"
 
     cp "\$OUT_DIR/denovo.tsv" "${sample_name}/denovo.tsv"
     """
