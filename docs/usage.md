@@ -14,8 +14,10 @@ Different profiles exist depending on which system and container platform you're
 `-profile docker_gpu`: Docker on Ubuntu/WSL using GPU.
 
 **Mandatory**  
-`-i / --input` - Path to .tsv file containing your sample inputs, [see **input** section below](#data-preparation).  
-`-o / --output_dir` - Directory that results will be written to.  
+`--input` - Path to .tsv file containing your sample inputs, [see **input** section below](#data-preparation).  
+`--output_dir` - Directory that results will be written to.  
+`--gtdb_db_dir` - Directory produced by `create-dbs` [containing the GTDB metadata and MMseqs database](installation.md#4-setting-up-novotax).  
+`--gtdb_protein_reps` - [Directory containing GTDB representative](installation.md#4-setting-up-novotax) proteome FASTA files (e.g. `protein_faa_reps/`).  
 
 **Optional**  
 `--xuanjinovo_model_file PATH` - Path to a XuanjiNovo model file, [see **models** section below](#models).  
@@ -23,9 +25,9 @@ Different profiles exist depending on which system and container platform you're
 `--filter_contaminants true/false` - Filter [cRAP contaminants](https://www.thegpm.org/crap/) (default **true**). Can be turned off if sample is expected to be of high purity.  
 `--filter_host PATH` - Path to fasta file containing host proteome to filter host related peptides (default **NONE**). Can be used if host contaminations are expected.  
 `--ncbi_api_key KEY` - [NCBI API key](https://www.ncbi.nlm.nih.gov/datasets/docs/v2/api/api-keys/) to increase rate limits and access to NCBI servers.  
-`--genus_score float` -  Min. value of genus score for the search iterations to continue (default: **1275**). Can be decreased to include less confident species.  
-`--max_iterations int`- Max. number of iterations before NovoTax halts (default: **20**). This value can be increased if a community is expected to consist of more than 20 strains.  
-`--max_strains int`- Max. number of strains downloaded per species. (default: **1000**). Can be increased to get better strain coverage at the cost of increased disk usage and runtime.
+`--genus_score float` - Min. value of genus score for the search iterations to continue (default: **1275**).  
+`--max_iterations int` - Max. number of iterations before NovoTax halts (default: **20**).  
+`--max_strains int` - Max. number of strains downloaded per species (default: **1000**).  
 
 ## Input
 

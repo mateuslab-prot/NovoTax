@@ -185,9 +185,9 @@ rm gtdb_proteins_aa_reps_r226.tar.gz
 ### Building the genus representatives database
 The genus representatives database is now ready to be constructed (please make sure you **use the profile and paths appropriate for your system**):
 ```bash
-$ nextflow run main.nf -profile docker --create_dbs ./novotax_db --gtdb_protein_rep_dir /data/dbs/gtdb/release232/
+nextflow run main.nf -profile docker_gpu --create_dbs ./novotax_db --gtdb_protein_reps /data/dbs/gtdb/release226/protein_faa_reps --gtdb_release 226
 ```
-Expected output:  
+Example output on success:  
 <img src="../assets/images/nextflow_db_creation_output.png" alt="Nextflow database creation output example">
 
 
