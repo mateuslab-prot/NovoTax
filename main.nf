@@ -210,6 +210,7 @@ process RUN_CASCADIA_WITH_MODEL {
 
     mkdir -p "${sample_name}"
 
+    WORKDIR="\$(pwd)"
     export NUMBA_CACHE_DIR="\$WORKDIR/.numba_cache"
     mkdir -p "\$NUMBA_CACHE_DIR"
 
@@ -236,6 +237,7 @@ process RUN_CASCADIA_DEFAULT_MODEL {
 
     mkdir -p "${sample_name}"
 
+    WORKDIR="\$(pwd)"
     export NUMBA_CACHE_DIR="\$WORKDIR/.numba_cache"
     mkdir -p "\$NUMBA_CACHE_DIR"
 
