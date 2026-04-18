@@ -203,9 +203,9 @@ Example output on success:
 If the environment is working correctly, you can run a short demo using example data. Doing this will also download all the containers required to run NovoTax, making subsequent runs quicker to run.
 
 Run NovoTax on the example data using the profile that matches your environment
-    - `-profile apptainer_gpu` **(default)**: Apptainer on Ubuntu using 
-    - `-profile apptainer_wsl_gpu`: Apptainer on WSL using GPU
-    - `-profile docker_gpu`: Docker on Ubuntu/WSL using GPU
+- `-profile apptainer_gpu` **(default)**: Apptainer on Ubuntu using
+- `-profile apptainer_wsl_gpu`: Apptainer on WSL using GPU
+- `-profile docker_gpu`: Docker on Ubuntu/WSL using GPU
 
 ```bash
 nextflow run main.nf -profile apptainer_wsl_gpu --input examples/samples.tsv --output_dir example_results/ --gtdb_protein_reps /data/dbs/gtdb/release226/protein_faa_reps --gtdb_db_dir novotax_db_r226
