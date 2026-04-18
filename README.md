@@ -42,7 +42,7 @@ You need:
 
 Create a tab-separated file like this:
 
-| sample_name     | file_path                                | data_format |
+| experiment_name     | file_path                                | data_format |
 |-----------------|------------------------------------------|-------------|
 | XuanjiNovo_demo | /full/path/to/folder/demo_xuanjinovo.mgf | dda         |
 | Cascadia_demo   | /full/path/to/folder/demo_cascadia.mzML  | dia         |
