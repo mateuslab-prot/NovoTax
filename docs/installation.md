@@ -12,7 +12,7 @@ To run NovoTax locally, the following tools are needed:
 NovoTax is intended to run on:
 
 - **Windows through WSL2**
-    - To install Windows Subsystem for Linus (WSL), please follow the [official guide](https://learn.microsoft.com/en-us/windows/wsl/install)
+    - To install Windows Subsystem for Linux (WSL), please follow the [official guide](https://learn.microsoft.com/en-us/windows/wsl/install)
 - **Ubuntu**
 
 
@@ -33,7 +33,7 @@ Check whether Nextflow is already available:
 nextflow -version
 ```
 
-If not, the steps below is enough for a typical installation. If you face problems during this, please refer to the [official documentation](https://docs.seqera.io/nextflow/install).
+If not, the steps below are enough for a typical installation. If you face problems during this, please refer to the [official documentation](https://docs.seqera.io/nextflow/install).
 
 ### Install Java
 Nextflow requires Java 17 (or later, up to 26). Check which version of Java you have with:
@@ -182,7 +182,7 @@ wget https://data.gtdb.ecogenomic.org/releases/release226/226.0/genomic_files_re
 ```bash
 tar xzf gtdb_proteins_aa_reps_r226.tar.gz
 ```
-5. Bacteria and archaea are seperated by default, combine them into one folder:
+5. Bacteria and archaea are separated by default, combine them into one folder:
 ```bash
 find protein_faa_reps/{bacteria,archaea} -maxdepth 1 -type f -name '*.faa.gz' -exec mv -t protein_faa_reps {} +
 ``` 
@@ -203,9 +203,10 @@ Example output on success:
 If the environment is working correctly, you can run a short demo using example data. Doing this will also download all the containers required to run NovoTax, making subsequent runs quicker to run.
 
 Run NovoTax on the example data using the profile that matches your environment
-    - `-profile apptainer_gpu` **(default)**: Apptainer on Ubuntu using GPU
+    - `-profile apptainer_gpu` **(default)**: Apptainer on Ubuntu using 
     - `-profile apptainer_wsl_gpu`: Apptainer on WSL using GPU
     - `-profile docker_gpu`: Docker on Ubuntu/WSL using GPU
+
 ```bash
 nextflow run main.nf -profile apptainer_wsl_gpu --input examples/samples.tsv --output_dir example_results/ --gtdb_protein_reps /data/dbs/gtdb/release226/protein_faa_reps --gtdb_db_dir novotax_db_r226
 ```
