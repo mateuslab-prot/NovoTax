@@ -46,35 +46,17 @@ NovoTax is designed to accept a list of sample names, file paths and data format
 ## Output
 NovoTax creates one folder for each experiment, creating a folder structure as follows:
 ```
-├── experiment1_dda
-│   ├── file1
-│   │   ├── file1_db.fasta              # Fasta file for all strains found in file
-│   │   ├── file1_peptides.txt          # All unique peptides with score over threshold found in file
-│   │   ├── file1_xuanjinovo.tsv        # Raw output of de novo predictions for file
-│   │   ├── strain_hits.png             # Quality control plots showing strain scoring for file
-│   │   └── strain_hits.tsv             # Taxonomy, GTDB accessions and score for each strain found in file
-│   ├── file2
-│   │   ├── file2_db.fasta
-│   │   ├── file2_peptides.txt
-│   │   ├── file2_xuanjinovo.tsv
-│   │   ├── strain_hits.png
-│   │   └── strain_hits.tsv
-│   ├── concat_xuanjinovo.tsv           # Concatenated raw output of de novo predictions for experiment
-│   ├── experiment1_peptides.txt        # All unique peptides with score over threshold found in experiment
-│   ├── experiment1_db.fasta            # Fasta file for all strains found in experiment
-│   ├── strain_hits.png                 # Quality control plots showing strain scoring for experiment
-│   └── strain_hits.tsv                 # Taxonomy, GTDB accessions and score for each strain found in experiment
-└── experiment2_dia
-    ├── file3
-    │   ├── file3_cascadia.ssl          # Raw output of de novo predictions for file
-    │   ├── file3_db.fasta
-    │   ├── strain_hits.png
-    │   └── strain_hits.tsv
-    ├── concat_cascadia.ssl             # Concatenated raw output of de novo predictions for experiment
-    ├── experiment2_peptides.txt
-    ├── experiment2_db.fasta
-    ├── strain_hits.png
-    └── strain_hits.tsv
+├── extended_example_results
+│   ├── PXD010000_C_Baltica
+│   │   ├── PXD010000_C_Baltica_genus_scores.png    - Graph showing the genus scores of all strains found in sample
+│   │   ├── PXD010000_C_Baltica_peptides.txt        - All peptides in the sample over scoring threshold (0.8 default)
+│   │   ├── PXD010000_C_Baltica_strains.fasta       - Fasta containing the concatenated proteomes of all strains found
+│   │   └── results.tsv                             - Extended NovoTax output
+│   ├── PXD010000_HL93
+│   │   ├── PXD010000_HL93_genus_scores.png
+│   │   ├── PXD010000_HL93_peptides.txt
+│   │   ├── PXD010000_HL93_strains.fasta
+│   │   └── results.tsv
 ```
 
 ## Example
