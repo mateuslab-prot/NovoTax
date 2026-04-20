@@ -55,24 +55,31 @@ With the results folder structure being:
 
 Below, you can find the results of each sample.
 
-### *M. alcaliphilum*
+### PXD010000_M_alcali
 `M_alcali_copp_MeOH_B2_T2_04_QE_23Mar18_Oak_18-01-07.mgf`
+
+In this example, only one strain is clearly identified above the genus threshold score: *M. alcaliphilum* (the species reported to be present in the sample).
 
 <img src="../assets/images/PXD010000_M_alcali_genus_scores.png" alt="Genus scores for M. alcaliphilum*">
 
 
-### *H. sp. HL93*
-`Biodiversity_HL93_HLHfructose_aerobic_3_09Jun16_Pippin_16-03-39.mgf`  
-*Note: Halomonas sp. HL93 has been named Vreelandella sp900086985 in GTDB*
+### PXD010000_HL93
+`Biodiversity_HL93_HLHfructose_aerobic_3_09Jun16_Pippin_16-03-39.mgf`
+
+In this example, two strains are clearly identified above the genus threshold score: *Arthrobacter sp.* and *Vreelandella sp.* The species reported by the authors *Halomonas sp. HL93* has been named *Vreelandella sp900086985* in GTDB, thus this example shows that two species are likely present in the sample. In the [NovoTax manuscript](https://www.biorxiv.org/content/10.64898/2026.04.02.715787v1), we show strong evidence that the second species is indeed present in the sample.
 
 <img src="../assets/images/PXD010000_HL93_genus_scores.png" alt="Genus scores for H. sp. HL93">
 
-### *P. ruminicola*
+### PXD010000_P_ruminicola
 `Biodiversity_P_ruminicola_MDM_anaerobic_1_09Jun16_Pippin_16-03-39.mgf`
+
+In this example, five strains are identified above the genus threshold score: *Prevotella ruminicola* (the strain reported by the authors), *Cutibacterium acnes*, *Vreelandella sp.*, *Escherichia coli*, and *Arthrobacter sp.*. In the [NovoTax manuscript](https://www.biorxiv.org/content/10.64898/2026.04.02.715787v1), we show strong evidence that *C. acnes* is also present in the sample. Peptides from the other strains are also likely present, but we suspect that they originate from cross-contamination with other samples (e.g., carryover in the LC-MS analysis, given that all of them are species that the authors also analyze in their [dataset](https://www.ebi.ac.uk/pride/archive/projects/PXD010000)). Regardless, best practice in proteomics says that one should search the raw data with all species that are likely present to correctly control the false discovery rate. Thus, we suggest that the output fasta with all 5 strains is used for a traditional proteomics search.
 
 <img src="../assets/images/PXD010000_P_ruminicola_genus_scores.png" alt="Genus scores for P. r">
 
-### B_a8_221_TP96hrs_control_rep1
+### PXD036445_96hrs_control_1
 `Biodiversity_C_Baltica_T240_R3_Inf_27Jan16_Arwen_15-07-13.mgf`
+
+In this example, we demonstrate that NovoTax can also work with DIA data from species communities. We use a single file for illustration purposes, but, in communities, analyzing more files from different conditions is likely to identify more strains. The species identified here are all known to be part of the original community, including the one below the genus threshold. Thus, if the user wants the software to keep running, it is possible to lower the threshold using the ´--genus_score´ flag. Note: care should be taken when lowering this threshold, as false positives might start appearing. We have calibrated the genus score based on single species samples, and the threshold is already quite relaxed (corresponding to the median genus score of the peptides left after the first round of NovoTax on single species samples).
 
 <img src="../assets/images/PXD036445_96hrs_control_1_genus_scores.png" alt="Genus scores for B_a8_221_TP96hrs_control_rep1">
