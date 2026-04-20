@@ -119,6 +119,16 @@ if (!runningCreateDbs) {
             tuple(sampleName, inputFile, dataFormat)
         }
         .set { samples_ch }
+
+    samples_ch
+        .map { sample_name, input_file, data_format -> sample_name }
+        .collect()
+        .map { names ->
+            def duplicates = names.groupBy { it }.findAll { k, v -> v.size() > 1 }.keySet()
+            if (duplicates) {
+                error "Duplicate sample names derived from input files: ${duplicates.join(', ')}"
+            }
+        }
 }
 
 process RUN_XUANJINOVO_WITH_MODEL {
