@@ -63,7 +63,7 @@ NovoTax creates one folder for each experiment, creating a folder structure as f
 │   ├── demo_xuanjinovo_genus_scores.png    - Graph showing the genus scores of all strains found in sample
 │   ├── demo_xuanjinovo_peptides.txt        - All peptides in the sample over scoring threshold (0.8 default)
 │   ├── demo_xuanjinovo_strains.fasta       - Fasta containing the concatenated proteomes of all strains found
-│   └── results.tsv                 - Extended NovoTax output
+│   └── results.tsv                         - Extended NovoTax output
 ├── demo_cascadia
 │   ├── demo_cascadia_genus_scores.png
 │   ├── demo_cascadia_peptides.txt
