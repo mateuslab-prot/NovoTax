@@ -33,10 +33,10 @@ Different profiles exist depending on which system and container platform you're
 
 NovoTax is designed to accept a list of sample names, file paths and data format using a tab separated (.tsv) file. DDA data to be sequenced using XuanjiNovo is required to be in .mgf format while DIA data to be sequenced with Cascadia requires the data to be in .mzML format. We recommend [msconvert](https://proteowizard.sourceforge.io/tools/msconvert.html) to convert raw data into the appropriate formats.
 
-|      | file_path                                | data_format |
-|-----------------|------------------------------------------|-------------|
-|  | /full/path/to/folder/demo_xuanjinovo.mgf | dda         |
-|    | /full/path/to/folder/demo_cascadia.mzML  | dia         |
+| file_path                                | data_format |
+|------------------------------------------|-------------|
+| /full/path/to/folder/demo_xuanjinovo.mgf | dda         |
+| /full/path/to/folder/demo_cascadia.mzML  | dia         |
 
 ## Models
 **XuanjiNovo**: The `XuanjiNovo_130M_massnet_massivekb.ckpt` model finetuned on 30M MassiveKB is included in the XuanjiNovo image. A different model can be used with  `--model_file MODEL_FILE_PATH`.

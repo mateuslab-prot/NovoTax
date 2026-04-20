@@ -42,10 +42,10 @@ You need:
 
 Create a tab-separated file like this:
 
-|      | file_path                                | data_format |
-|-----------------|------------------------------------------|-------------|
-|  | /full/path/to/folder/demo_xuanjinovo.mgf | dda         |
-|    | /full/path/to/folder/demo_cascadia.mzML  | dia         |
+| file_path                                | data_format |
+|------------------------------------------|-------------|
+| /full/path/to/folder/demo_xuanjinovo.mgf | dda         |
+| /full/path/to/folder/demo_cascadia.mzML  | dia         |
 
 ### 3. Run the pipeline
 
