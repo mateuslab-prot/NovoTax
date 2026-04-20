@@ -100,22 +100,22 @@ if (!runningCreateDbs) {
         .fromPath(inputPath, checkIfExists: true)
         .splitCsv(header: true, sep: '\t')
         .map { row ->
-            def sampleName = row.sample_name?.toString()?.trim()
             def filePath = row.file_path?.toString()?.trim()
             def dataFormat = row.data_format?.toString()?.trim()?.toLowerCase()
 
-            if (!sampleName || !filePath || !dataFormat) {
-                error "Each row in the input TSV must contain sample_name, file_path, and data_format"
+            if (!filePath || !dataFormat) {
+                error "Each row in the input TSV must contain file_path and data_format"
             }
             if (!(dataFormat in ['dda', 'dia'])) {
-                error "Unsupported data_format '${dataFormat}' for sample '${sampleName}'. Supported values: dda, dia"
+                error "Unsupported data_format '${dataFormat}' for file '${filePath}'. Supported values: dda, dia"
             }
 
             def inputFile = file(filePath)
             if (!inputFile.exists()) {
-                error "Input file not found for sample '${sampleName}': ${filePath}"
+                error "Input file not found: ${filePath}"
             }
 
+            def sampleName = inputFile.getName().replaceAll(/\..+$/, '')
             tuple(sampleName, inputFile, dataFormat)
         }
         .set { samples_ch }
