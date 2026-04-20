@@ -51,9 +51,10 @@ Create a tab-separated file like this:
 
 ```bash
 nextflow run main.nf \
-  --input /path/to/samples.tsv \
-  --output_dir /path/to/results \
-  --model_file /path/to/model.ckpt
+  --input examples/samples.tsv \
+  --output_dir example_results \
+  --gtdb_protein_reps /data/dbs/gtdb/release226/protein_faa_reps \
+  --gtdb_db_dir novotax_db_r226
 ```
 
 ## Output
