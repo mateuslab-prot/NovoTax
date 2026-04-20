@@ -42,10 +42,10 @@ You need:
 
 Create a tab-separated file like this:
 
-| experiment_name     | file_path                                | data_format |
+|      | file_path                                | data_format |
 |-----------------|------------------------------------------|-------------|
-| XuanjiNovo_demo | /full/path/to/folder/demo_xuanjinovo.mgf | dda         |
-| Cascadia_demo   | /full/path/to/folder/demo_cascadia.mzML  | dia         |
+|  | /full/path/to/folder/demo_xuanjinovo.mgf | dda         |
+|    | /full/path/to/folder/demo_cascadia.mzML  | dia         |
 
 ### 3. Run the pipeline
 
@@ -59,17 +59,16 @@ nextflow run main.nf \
 ## Output
 NovoTax creates one folder for each experiment, creating a folder structure as follows:
 ```
-├── extended_example_results
-│   ├── PXD010000_C_Baltica
-│   │   ├── PXD010000_C_Baltica_genus_scores.png    - Graph showing the genus scores of all strains found in sample
-│   │   ├── PXD010000_C_Baltica_peptides.txt        - All peptides in the sample over scoring threshold (0.8 default)
-│   │   ├── PXD010000_C_Baltica_strains.fasta       - Fasta containing the concatenated proteomes of all strains found
-│   │   └── results.tsv                             - Extended NovoTax output
-│   ├── PXD010000_HL93
-│   │   ├── PXD010000_HL93_genus_scores.png
-│   │   ├── PXD010000_HL93_peptides.txt
-│   │   ├── PXD010000_HL93_strains.fasta
-│   │   └── results.tsv
+├── demo_xuanjinovo
+│   ├── demo_xuanjinovo_genus_scores.png    - Graph showing the genus scores of all strains found in sample
+│   ├── demo_xuanjinovo_peptides.txt        - All peptides in the sample over scoring threshold (0.8 default)
+│   ├── demo_xuanjinovo_strains.fasta       - Fasta containing the concatenated proteomes of all strains found
+│   └── results.tsv                 - Extended NovoTax output
+├── demo_cascadia
+│   ├── demo_cascadia_genus_scores.png
+│   ├── demo_cascadia_peptides.txt
+│   ├── demo_cascadia_strains.fasta
+│   └── results.tsv
 ```
 
 

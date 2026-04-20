@@ -3,10 +3,10 @@
 ## Data
 
 The following example contains all the commands to run a subset of the analysis performed in the paper. They were chosen to be representative of the different datatypes (DDA / DIA) and different findings. It consists of five files:
-* **M_alcali_copp_MeOH_B2_T2_04_QE_23Mar18_Oak_18-01-07.mgf** - From [PXD010000](https://www.ebi.ac.uk/pride/archive/projects/PXD010000), DDA data with no detected contamination
-* **Biodiversity_HL93_HLHfructose_aerobic_3_09Jun16_Pippin_16-03-39.mgf** - From [PXD010000](https://www.ebi.ac.uk/pride/archive/projects/), DDA data with two species detected (one probable contamination)
-* **Biodiversity_P_ruminicola_MDM_anaerobic_1_09Jun16_Pippin_16-03-39.mgf** - From [PXD010000](https://www.ebi.ac.uk/pride/archive/projects/), DDA data with multiple species detected as probable contamination 
-* **20181112_QX8_PhGe_SA_EasyLC12-14_B_a8_221_TP96hrs_control_rep1.mzML** & **20181112_QX8_PhGe_SA_EasyLC12-12_B_a6_222_TP96hrs_control_rep2.mzML** - From [PXD036445](https://www.ebi.ac.uk/pride/archive/projects/PXD036445), DIA data from complex community. Highlights using multiple files from one experiment.
+* **PXD010000_M_alcali** `M_alcali_copp_MeOH_B2_T2_04_QE_23Mar18_Oak_18-01-07.mgf` - From [PXD010000](https://www.ebi.ac.uk/pride/archive/projects/PXD010000), DDA data with no detected contamination
+* **PXD010000_HL93** `Biodiversity_HL93_HLHfructose_aerobic_3_09Jun16_Pippin_16-03-39.mgf` - From [PXD010000](https://www.ebi.ac.uk/pride/archive/projects/), DDA data with two species detected (one probable contamination)
+* **PXD010000_P_ruminicola** `Biodiversity_P_ruminicola_MDM_anaerobic_1_09Jun16_Pippin_16-03-39.mgf` - From [PXD010000](https://www.ebi.ac.uk/pride/archive/projects/), DDA data with multiple species detected as probable contamination 
+* **PXD036445_96hrs_control_1** `20181112_QX8_PhGe_SA_EasyLC12-14_B_a8_221_TP96hrs_control_rep1.mzML` - From [PXD036445](https://www.ebi.ac.uk/pride/archive/projects/PXD036445), DIA data from complex community. Highlights using multiple files from one experiment.
 
 These files are [deposited to Zenodo](https://zenodo.org/records/19495971) and will be downloaded when running the example script.
 
@@ -51,11 +51,6 @@ With the results folder structure being:
 │   │   ├── PXD036445_96hrs_control_1_peptides.txt
 │   │   ├── PXD036445_96hrs_control_1_strains.fasta
 │   │   └── results.tsv
-│   └── PXD036445_96hrs_control_2
-│       ├── PXD036445_96hrs_control_2_genus_scores.png
-│       ├── PXD036445_96hrs_control_2_peptides.txt
-│       ├── PXD036445_96hrs_control_2_strains.fasta
-│       └── results.tsv
 ```
 
 Below, you can find the results of each sample.
