@@ -28,6 +28,15 @@ results/
 .apptainer_cache/
 
 # Local runs / outputs
+berzelius/
+cache/
+.novotax_cache/
+data/
+protein_faa_reps/
+novotax_db_r*/
+example_results/
+extended_example_results/
+gtdb_proteins_aa_reps_r*.tar.gz
 test_run/
 tmp/
 temp/

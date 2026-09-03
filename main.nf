@@ -6,6 +6,26 @@ def coalesce(value, fallback) {
 }
 
 
+def requireProbability(value, label) {
+    if (value == null) {
+        error "${label} is required"
+    }
+
+    double parsed
+    try {
+        parsed = Double.parseDouble(value.toString().trim())
+    } catch (NumberFormatException ignored) {
+        error "${label} must be a finite number between 0 and 1"
+    }
+
+    if (Double.isNaN(parsed) || Double.isInfinite(parsed) || parsed < 0d || parsed > 1d) {
+        error "${label} must be a finite number between 0 and 1"
+    }
+
+    return parsed
+}
+
+
 def absolutePathOrNull(value) {
     value != null ? new File(value.toString()).absolutePath : null
 }
@@ -43,6 +63,7 @@ def gtdbProteinRepsPath = absolutePathOrNull(coalesce(params.gtdb_protein_reps, 
 def filterHostPath = absolutePathOrNull(coalesce(params.filter_host, params.novotax_filter_host))
 def filterContaminants = coalesce(params.filter_contaminants, params.novotax_filter_contaminants)
 def ncbiApiKey = coalesce(params.ncbi_api_key, params.novotax_ncbi_api_key)
+def denovoScore = requireProbability(coalesce(params.denovo_score, 0.8), '--denovo_score')
 def genusScore = coalesce(params.genus_score, params.novotax_genus_score) ?: 1275
 def maxIterations = coalesce(params.max_iterations, params.novotax_max_iterations) ?: 20
 def maxStrains = coalesce(params.max_strains, params.novotax_max_strains) ?: 1000
@@ -106,8 +127,8 @@ if (!runningCreateDbs) {
             if (!filePath || !dataFormat) {
                 error "Each row in the input TSV must contain file_path and data_format"
             }
-            if (!(dataFormat in ['dda', 'dia'])) {
-                error "Unsupported data_format '${dataFormat}' for file '${filePath}'. Supported values: dda, dia"
+            if (!(dataFormat in ['dda', 'dia', 'peptides'])) {
+                error "Unsupported data_format '${dataFormat}' for file '${filePath}'. Supported values: dda, dia, peptides"
             }
 
             def inputFile = file(filePath)
@@ -116,19 +137,20 @@ if (!runningCreateDbs) {
             }
 
             def sampleName = inputFile.getName().replaceAll(/\..+$/, '')
+            if (!(sampleName ==~ /[A-Za-z0-9][A-Za-z0-9._-]*/)) {
+                error "Unsafe sample name '${sampleName}' derived from file '${filePath}'"
+            }
             tuple(sampleName, inputFile, dataFormat)
         }
-        .set { samples_ch }
-
-    samples_ch
-        .map { sample_name, input_file, data_format -> sample_name }
-        .collect()
-        .map { names ->
-            def duplicates = names.groupBy { it }.findAll { k, v -> v.size() > 1 }.keySet()
+        .collect(flat: false)
+        .flatMap { samples ->
+            def duplicates = samples.groupBy { it[0] }.findAll { k, v -> v.size() > 1 }.keySet()
             if (duplicates) {
                 error "Duplicate sample names derived from input files: ${duplicates.join(', ')}"
             }
+            samples
         }
+        .set { samples_ch }
 }
 
 process RUN_XUANJINOVO_WITH_MODEL {
@@ -228,7 +250,9 @@ process RUN_CASCADIA_WITH_MODEL {
     export NUMBA_CACHE_DIR="\$WORKDIR/.numba_cache"
     mkdir -p "\$NUMBA_CACHE_DIR"
 
-    cascadia sequence "${input_file}" "${cascadia_model_file}" -o "${sample_name}/${sample_name}_cascadia"
+    cascadia sequence "${input_file}" "${cascadia_model_file}" \
+      --score_threshold 0 \
+      -o "${sample_name}/${sample_name}_cascadia"
     cp "${sample_name}/${sample_name}_cascadia.ssl" "${sample_name}/denovo.tsv"
     """
 }
@@ -255,7 +279,9 @@ process RUN_CASCADIA_DEFAULT_MODEL {
     export NUMBA_CACHE_DIR="\$WORKDIR/.numba_cache"
     mkdir -p "\$NUMBA_CACHE_DIR"
 
-    cascadia sequence "${input_file}" "/opt/models/cascadia.ckpt" -o "${sample_name}/${sample_name}_cascadia"
+    cascadia sequence "${input_file}" "/opt/models/cascadia.ckpt" \
+      --score_threshold 0 \
+      -o "${sample_name}/${sample_name}_cascadia"
     cp "${sample_name}/${sample_name}_cascadia.ssl" "${sample_name}/denovo.tsv"
     """
 }
@@ -285,11 +311,13 @@ process RUN_NOVOTAX {
 
     python -u -m NovoTax.cli classify "${denovo_file}" \
       --output_dir . \
+      --sample_name "${sample_name}" \
       --gtdb-db-dir "${gtdb_db_dir}" \
       --gtdb-protein-reps "${gtdb_protein_reps}" \
       ${filterContArg} \
       ${filterHostArg} \
       ${ncbiApiArg} \
+      --denovo_score ${denovoScore} \
       --genus_score ${genusScore} \
       --max_iterations ${maxIterations} \
       --max_strains ${maxStrains}
@@ -328,6 +356,9 @@ workflow {
     } else {
         def dda_samples_ch = samples_ch.filter { sample_name, input_file, data_format -> data_format == 'dda' }
         def dia_samples_ch = samples_ch.filter { sample_name, input_file, data_format -> data_format == 'dia' }
+        def peptide_results = samples_ch
+            .filter { sample_name, input_file, data_format -> data_format == 'peptides' }
+            .map { sample_name, input_file, data_format -> tuple(sample_name, input_file) }
 
         def xuanjinovo_results = xuanjiModelPath != null
             ? RUN_XUANJINOVO_WITH_MODEL(
@@ -343,7 +374,7 @@ workflow {
             )
             : RUN_CASCADIA_DEFAULT_MODEL(dia_samples_ch)
 
-        def all_results = xuanjinovo_results.mix(cascadia_results)
+        def all_results = xuanjinovo_results.mix(cascadia_results).mix(peptide_results)
         def gtdb_db_dir_ch = Channel.value(file(gtdbDbDirPath))
         def gtdb_protein_reps_ch = Channel.value(file(gtdbProteinRepsPath))
         def host_filter_file_ch = Channel.value(

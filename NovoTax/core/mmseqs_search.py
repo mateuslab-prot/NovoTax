@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 import subprocess
 
@@ -62,6 +63,8 @@ def mmseqs_easy_search(
     tmp_dir = Path(tmp_dir)
     tmp_dir.mkdir(parents=True, exist_ok=True)
 
+    threads = os.getenv("SLURM_CPUS_PER_TASK") or str(os.cpu_count() or 1)
+
     cmd = [
         mmseqs_bin,
         "easy-search",
@@ -79,7 +82,8 @@ def mmseqs_easy_search(
         "--gap-open", "16",
         "--gap-extend", "2",
         "--min-length", "9",
-        "--max-seqs", "100000"
+        "--max-seqs", "100000",
+        "--threads", threads,
     ]
 
     run_command(cmd)

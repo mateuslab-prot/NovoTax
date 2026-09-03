@@ -8,7 +8,7 @@ Welcome! If you find any issues with this first release, please do not hesitate 
 
 **NovoTax** is a modular pipeline for identifying prokaryotic strains from mass spectrometry-based proteomics data.
 
-The full NovoTax workflow is designed to go from raw proteomics data to taxonomic assignment and a sample-specific protein database for downstream analysis.
+The full NovoTax workflow is designed to go from mass spectrometry data to taxonomic assignment and a sample-specific protein database for downstream analysis.
 
 ## Why use it?
 
@@ -46,6 +46,21 @@ Create a tab-separated file like this:
 |------------------------------------------|-------------|
 | /full/path/to/folder/demo_xuanjinovo.mgf | dda         |
 | /full/path/to/folder/demo_cascadia.mzML  | dia         |
+| /full/path/to/folder/sample_peptides.tsv | peptides    |
+
+Sample names and output folders are derived from each input filename by taking
+everything before the first period (for example, `sample.run.mgf` becomes
+`sample`). Derived names must be unique, start with a letter or number, and contain
+only letters, numbers, periods, underscores, or hyphens.
+
+With `data_format` set to `peptides`, the input bypasses de novo sequencing. The
+file must contain exactly two tab-separated fields per nonblank row: peptide
+sequence and probability score. A case-insensitive `peptide<TAB>score` header is
+optional. Scores must be finite values from 0 to 1; rows at or above
+`--denovo_score` are retained. Input order and repeated peptide observations are
+preserved. Surrounding whitespace and bracketed annotations are removed from
+peptide sequences, and isoleucine (`I`) residues are normalized to leucine (`L`)
+for matching.
 
 ### 3. Run the pipeline
 
@@ -58,19 +73,33 @@ nextflow run main.nf \
 ```
 
 ## Output
-NovoTax creates one folder for each experiment, creating a folder structure as follows:
+
+NovoTax creates one folder per sample:
 ```
 ├── demo_xuanjinovo
-│   ├── demo_xuanjinovo_genus_scores.png    - Graph showing the genus scores of all strains found in sample
-│   ├── demo_xuanjinovo_peptides.txt        - All peptides in the sample over scoring threshold (0.8 default)
-│   ├── demo_xuanjinovo_strains.fasta       - Fasta containing the concatenated proteomes of all strains found
-│   └── results.tsv                         - Extended NovoTax output
+│   ├── demo_xuanjinovo_genus_scores.png    - Graph showing genus scores across search iterations
+│   ├── demo_xuanjinovo_peptides.txt        - Peptides entering the taxonomic search after score and optional cRAP/host filtering
+│   ├── demo_xuanjinovo_strains.fasta       - FASTA containing the concatenated proteomes of all selected strains
+│   ├── peptide_hits.tsv                    - Provenance and assignment status for peptides entering the taxonomic search
+│   └── results.tsv                         - Run settings, timing, search results and summary counts
 ├── demo_cascadia
 │   ├── demo_cascadia_genus_scores.png
 │   ├── demo_cascadia_peptides.txt
 │   ├── demo_cascadia_strains.fasta
+│   ├── peptide_hits.tsv
 │   └── results.tsv
 ```
+
+`peptide_hits.tsv` contains one row for every peptide observation remaining after
+the configured cRAP and host filtering. It records the source identifier, original
+and searched sequence, input score, and whether the peptide was assigned to a
+selected strain. For assigned rows, the MMseqs target and bit score describe the
+best supporting hit within that strain; they are provenance fields rather than the
+accession score used to select the strain. Repeated peptide observations remain
+separate rows. An `unassigned` row was not assigned to a selected strain, but may
+still have MMseqs matches. `results.tsv` records run settings, timestamps, top
+search hits, iteration summaries, and the total taxonomic input, assigned, and
+unassigned peptide-observation counts.
 
 
 ## Cite

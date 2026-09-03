@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import csv
 import hashlib
+import math
 import os
 import random
 import re
 import shutil
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Callable, Iterable
 
@@ -15,7 +18,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from NovoTax.core.gtdb import GTDB, GTDBAssets, discover_gtdb_assets
-from NovoTax.core.mmseqs import get_mmseqs_hits, get_scores
+from NovoTax.core.mmseqs import (
+    get_best_query_hits_for_accession,
+    get_best_query_scores_for_accession,
+    get_mmseqs_hits,
+    get_scores,
+)
 from NovoTax.core.mmseqs_search import mmseqs_easy_search
 from NovoTax.dbs.create_db import build_mmseqs_db, process_fasta_folder_to_single, write_fasta
 from NovoTax.dbs.ncbi import NCBIProteomeDownloader
@@ -26,6 +34,7 @@ RNG_SEED = 42
 DEFAULT_CACHE_ROOT = Path("/tmp/novotax_cache")
 NOVOTAX_CACHE_DIR_ENV = "NOVOTAX_CACHE_DIR"
 NOVOTAX_CRAP_DB_ENV = "NOVOTAX_CRAP_DB"
+SAFE_SAMPLE_NAME_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
 
 
 @dataclass(frozen=True)
@@ -45,6 +54,7 @@ class RuntimePaths:
     output_root: Path
     sample_output_dir: Path
     result_path: Path
+    peptide_hits_path: Path
     peptides_path: Path
     strains_fasta_path: Path
     genus_plot_path: Path
@@ -70,6 +80,38 @@ class ClassificationResources:
     crap_db_prefix: Path
 
 
+@dataclass(frozen=True)
+class PeptideProvenance:
+    source_file: str
+    source_id: str
+    original_peptide: str
+    peptide: str
+    denovo_score: float
+
+
+@dataclass(frozen=True)
+class PeptideAssignment:
+    iteration: int
+    mmseqs_target: str
+    hit_organism_accession: str
+    mmseqs_bitscore: float
+
+
+PEPTIDE_HITS_COLUMNS = (
+    "query_id",
+    "source_file",
+    "source_id",
+    "original_peptide",
+    "peptide",
+    "denovo_score",
+    "assignment_status",
+    "iteration",
+    "mmseqs_target",
+    "hit_organism_accession",
+    "mmseqs_bitscore",
+)
+
+
 def decoy_pvalue(
     decoys: Iterable[float],
     real_score: float,
@@ -90,6 +132,12 @@ def decoy_pvalue(
 
 def ensure_parent(path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
+
+
+def write_timestamp(out_handle, event: str) -> None:
+    timestamp = datetime.now().astimezone().isoformat(timespec="seconds")
+    out_handle.write(f"timestamp\t{event}\t{timestamp}\n")
+    out_handle.flush()
 
 
 def ensure_existing_nonempty_dir(path: Path, description: str) -> Path:
@@ -173,22 +221,29 @@ def cache_root_from_environment() -> Path:
     return DEFAULT_CACHE_ROOT
 
 
-def build_runtime_paths(output_dir: Path, sample_name: str, input_file: Path) -> RuntimePaths:
+def build_runtime_paths(
+    output_dir: Path,
+    sample_name: str,
+    input_file: Path,
+    gtdb_release: int,
+) -> RuntimePaths:
     output_root = output_dir.expanduser().resolve()
     sample_output_dir = output_root / sample_name
 
     result_path = sample_output_dir / "results.tsv"
+    peptide_hits_path = sample_output_dir / "peptide_hits.tsv"
     peptides_path = sample_output_dir / f"{sample_name}_peptides.txt"
     strains_fasta_path = sample_output_dir / f"{sample_name}_strains.fasta"
     genus_plot_path = sample_output_dir / f"{sample_name}_genus_scores.png"
 
-    cache_root = cache_root_from_environment()
+    cache_root = cache_root_from_environment() / f"gtdb_r{gtdb_release}"
     fasta_cache_dir = cache_root / "fastas" / "db_cache"
     db_cache_dir = cache_root / "mmseqs_dbs" / "dynamic"
     strain_fasta_cache_dir = cache_root / "fastas" / "strain_cache"
     cached_genus_results_dir = cache_root / "mmseqs_results" / "genus_base"
 
-    token = hashlib.sha1(str(input_file.resolve()).encode("utf-8")).hexdigest()[:10]
+    token_source = f"{input_file.resolve()}\0{output_root}"
+    token = hashlib.sha1(token_source.encode("utf-8")).hexdigest()[:10]
     work_dir = Path("/tmp/novotax_work") / f"{sample_name}_{token}"
     peptide_fasta_dir = work_dir / "fastas" / "peptides"
     tmp_fasta_dir = work_dir / "downloads" / "family"
@@ -212,6 +267,7 @@ def build_runtime_paths(output_dir: Path, sample_name: str, input_file: Path) ->
         output_root=output_root,
         sample_output_dir=sample_output_dir,
         result_path=result_path,
+        peptide_hits_path=peptide_hits_path,
         peptides_path=peptides_path,
         strains_fasta_path=strains_fasta_path,
         genus_plot_path=genus_plot_path,
@@ -235,11 +291,111 @@ def cleanup_work_dir(paths: RuntimePaths) -> None:
     shutil.rmtree(paths.work_dir, ignore_errors=True)
 
 
+def validate_sample_name(sample_name: str) -> str:
+    if not SAFE_SAMPLE_NAME_PATTERN.fullmatch(sample_name):
+        raise ValueError(
+            "Sample name must start with a letter or number and contain only "
+            "letters, numbers, periods, underscores, or hyphens"
+        )
+    return sample_name
+
+
 def clean_prediction(sequence: str) -> str:
     return re.sub(r"\[.*?\]", "", sequence)
 
 
-def read_xuanjinovo(path: Path, score_threshold: float = DEFAULT_SCORE_THRESHOLD) -> dict[str, str]:
+def is_peptide_score_header(parts: list[str]) -> bool:
+    if len(parts) != 2:
+        return False
+
+    peptide_label = parts[0].lstrip("\ufeff").strip().lower()
+    score_label = parts[1].strip().lower()
+    return (peptide_label, score_label) == ("peptide", "score")
+
+
+def is_peptide_score_row(parts: list[str]) -> bool:
+    if len(parts) != 2:
+        return False
+
+    try:
+        float(parts[1])
+    except ValueError:
+        return False
+    return True
+
+
+def parse_peptide_score(value: str, path: Path, line_number: int) -> float:
+    try:
+        score = float(value)
+    except ValueError as error:
+        raise ValueError(
+            f"Invalid probability score in {path} at line {line_number}: {value!r}"
+        ) from error
+
+    if not math.isfinite(score) or not 0.0 <= score <= 1.0:
+        raise ValueError(
+            f"Invalid probability score in {path} at line {line_number}: "
+            f"expected a finite value between 0 and 1, got {value!r}"
+        )
+
+    return score
+
+
+def read_peptide_scores(
+    path: Path,
+    score_threshold: float = DEFAULT_SCORE_THRESHOLD,
+    provenance: dict[str, PeptideProvenance] | None = None,
+) -> dict[str, str]:
+    peptides: dict[str, str] = {}
+    idx = 1
+    seen_content = False
+
+    with path.open(encoding="utf-8-sig") as handle:
+        for line_number, line in enumerate(handle, start=1):
+            if not line.strip():
+                continue
+
+            parts = line.rstrip("\r\n").split("\t")
+            if not seen_content and is_peptide_score_header(parts):
+                seen_content = True
+                continue
+
+            seen_content = True
+            if len(parts) != 2:
+                raise ValueError(
+                    f"Invalid peptide-score row in {path} at line {line_number}: "
+                    "expected exactly two tab-separated fields"
+                )
+
+            original_prediction, score_text = parts
+            score = parse_peptide_score(score_text, path, line_number)
+            if score < score_threshold:
+                continue
+
+            prediction = clean_prediction(original_prediction.strip()).replace("I", "L")
+            if not prediction:
+                continue
+
+            query_id = str(idx)
+            peptides[query_id] = prediction
+            if provenance is not None:
+                provenance[query_id] = PeptideProvenance(
+                    source_file=path.name,
+                    source_id=str(line_number),
+                    original_peptide=original_prediction,
+                    peptide=prediction,
+                    denovo_score=score,
+                )
+            idx += 1
+
+    return peptides
+
+
+def read_xuanjinovo(
+    path: Path,
+    score_threshold: float = DEFAULT_SCORE_THRESHOLD,
+    provenance: dict[str, PeptideProvenance] | None = None,
+) -> dict[str, str]:
     peptides: dict[str, str] = {}
     idx = 1
 
@@ -250,17 +406,36 @@ def read_xuanjinovo(path: Path, score_threshold: float = DEFAULT_SCORE_THRESHOLD
             if len(parts) != 4:
                 continue
 
-            _, prediction, _, score = parts
-            if float(score) < score_threshold:
+            title, prediction, _, score = parts
+            score_value = float(score)
+            if score_value < score_threshold:
                 continue
 
-            peptides[str(idx)] = clean_prediction(prediction)
+            original_prediction = prediction
+            prediction = clean_prediction(original_prediction)
+            if not prediction:
+                continue
+
+            query_id = str(idx)
+            peptides[query_id] = prediction
+            if provenance is not None:
+                provenance[query_id] = PeptideProvenance(
+                    source_file="",
+                    source_id=title,
+                    original_peptide=original_prediction,
+                    peptide=prediction,
+                    denovo_score=score_value,
+                )
             idx += 1
 
     return peptides
 
 
-def read_cascadia(path: Path, score_threshold: float = DEFAULT_SCORE_THRESHOLD) -> dict[str, str]:
+def read_cascadia(
+    path: Path,
+    score_threshold: float = DEFAULT_SCORE_THRESHOLD,
+    provenance: dict[str, PeptideProvenance] | None = None,
+) -> dict[str, str]:
     peptides: dict[str, str] = {}
     idx = 1
 
@@ -271,41 +446,81 @@ def read_cascadia(path: Path, score_threshold: float = DEFAULT_SCORE_THRESHOLD) 
             if len(parts) < 6:
                 continue
 
-            prediction = parts[3]
+            source_file, source_id = parts[0], parts[1]
+            original_prediction = parts[3]
             score = float(parts[5])
             if score < score_threshold:
                 continue
 
-            peptides[str(idx)] = clean_prediction(prediction)
+            prediction = clean_prediction(original_prediction)
+            if not prediction:
+                continue
+
+            query_id = str(idx)
+            peptides[query_id] = prediction
+            if provenance is not None:
+                provenance[query_id] = PeptideProvenance(
+                    source_file=source_file,
+                    source_id=source_id,
+                    original_peptide=original_prediction,
+                    peptide=prediction,
+                    denovo_score=score,
+                )
             idx += 1
 
     return peptides
 
 
 def detect_input_format(path: Path) -> str:
+    peptide_score_format_found = False
+    first_nonblank_seen = False
+
     with path.open() as handle:
-        next(handle, None)
+        first_line = next(handle, None)
+        if first_line is not None and first_line.strip():
+            first_nonblank_seen = True
+            first_parts = first_line.rstrip("\r\n").split("\t")
+            if is_peptide_score_header(first_parts) or is_peptide_score_row(first_parts):
+                return "peptides"
+            if len(first_parts) == 4:
+                return "xuanjinovo"
+            if len(first_parts) >= 6:
+                return "cascadia"
+
         for line in handle:
-            parts = line.rstrip("\n").split("\t")
+            parts = line.rstrip("\r\n").split("\t")
             if not parts or all(not field for field in parts):
                 continue
+
+            if not first_nonblank_seen:
+                first_nonblank_seen = True
+                if is_peptide_score_header(parts) or is_peptide_score_row(parts):
+                    return "peptides"
+
             if len(parts) == 4:
                 return "xuanjinovo"
             if len(parts) >= 6:
                 return "cascadia"
+            if is_peptide_score_header(parts) or is_peptide_score_row(parts):
+                peptide_score_format_found = True
+
+    if peptide_score_format_found:
+        return "peptides"
 
     raise ValueError(
         f"Could not infer input format for {path}. Expected XuanjiNovo-style (4 columns) "
-        "or Cascadia-style (>=6 columns) rows."
+        "Cascadia-style (>=6 columns), or peptide-score (2 columns) rows."
     )
 
 
-def get_reader_for_file(path: Path) -> tuple[str, Callable[[Path, float], dict[str, str]]]:
+def get_reader_for_file(path: Path) -> tuple[str, Callable[..., dict[str, str]]]:
     data_format = detect_input_format(path)
     if data_format == "xuanjinovo":
         return data_format, read_xuanjinovo
     if data_format == "cascadia":
         return data_format, read_cascadia
+    if data_format == "peptides":
+        return data_format, read_peptide_scores
     raise ValueError(f"Unsupported data format: {data_format}")
 
 
@@ -327,6 +542,43 @@ def write_peptide_list(peptides: dict[str, str], output_path: Path) -> None:
     with output_path.open("w") as handle:
         for _, peptide in sorted(peptides.items(), key=peptide_sort_key):
             handle.write(f"{peptide}\n")
+
+
+def write_peptide_hits(
+    handle,
+    provenance: dict[str, PeptideProvenance],
+    query_ids: Iterable[str],
+    assignments: dict[str, PeptideAssignment],
+) -> None:
+    writer = csv.writer(handle, delimiter="\t", lineterminator="\n")
+    writer.writerow(PEPTIDE_HITS_COLUMNS)
+
+    for query_id in query_ids:
+        peptide = provenance[query_id]
+        assignment = assignments.get(query_id)
+
+        if assignment is None:
+            assignment_fields: tuple[object, ...] = ("unassigned", "", "", "", "")
+        else:
+            assignment_fields = (
+                "assigned",
+                assignment.iteration,
+                assignment.mmseqs_target,
+                assignment.hit_organism_accession,
+                assignment.mmseqs_bitscore,
+            )
+
+        writer.writerow(
+            (
+                query_id,
+                peptide.source_file,
+                peptide.source_id,
+                peptide.original_peptide,
+                peptide.peptide,
+                peptide.denovo_score,
+                *assignment_fields,
+            )
+        )
 
 
 def ensure_accession_fasta(
@@ -711,47 +963,55 @@ def ensure_host_db(host_path: Path, paths: RuntimePaths) -> Path:
     return db_prefix
 
 
+def pop_best_hit_peptides(
+    peptides: dict[str, str],
+    result_file: Path,
+    best_hit: str,
+) -> list[tuple[str, float]]:
+    hit_scores = get_best_query_scores_for_accession(result_file, best_hit)
+
+    removed_hits: list[tuple[str, float]] = []
+    for peptide_id, score in sorted(
+        hit_scores.items(),
+        key=lambda item: peptide_sort_key((item[0], "")),
+    ):
+        peptide = peptides.pop(peptide_id, None)
+        if peptide is not None:
+            removed_hits.append((peptide, score))
+
+    return removed_hits
+
+
 def remove_best_hit_peptides(
     peptides: dict[str, str],
     result_file: Path,
     best_hit: str,
 ) -> int:
-    to_remove: set[str] = set()
-
-    with result_file.open() as handle:
-        for line in handle:
-            parts = line.rstrip("\n").split("\t")
-            if len(parts) < 2:
-                continue
-
-            peptide_id, hit = parts[0], parts[1]
-            if peptide_id.startswith("rev_"):
-                continue
-            if best_hit in hit:
-                to_remove.add(peptide_id)
-
-    for peptide_id in to_remove:
-        peptides.pop(peptide_id, None)
-
-    return len(to_remove)
+    return len(pop_best_hit_peptides(peptides, result_file, best_hit))
 
 
 def main(
     filepath: Path,
     *,
     output_dir: Path = Path("/out"),
+    sample_name: str | None = None,
     gtdb_db_dir: Path,
     gtdb_protein_reps: Path,
     filter_contaminants: bool = True,
     filter_host: Path | None = None,
     ncbi_api_key: str | None = None,
+    denovo_score: float = DEFAULT_SCORE_THRESHOLD,
     genus_score: float = 1275.0,
     max_iterations: int = 20,
     max_strains: int = 1000,
 ) -> None:
     filepath = filepath.expanduser().resolve()
     output_dir = output_dir.expanduser().resolve()
+    if sample_name is not None:
+        sample_name = validate_sample_name(sample_name)
 
+    if not math.isfinite(denovo_score) or not 0.0 <= denovo_score <= 1.0:
+        raise ValueError("--denovo_score must be a finite value between 0 and 1")
     if not filepath.exists():
         raise FileNotFoundError(f"Input file does not exist: {filepath}")
     if max_iterations < 1:
@@ -764,8 +1024,14 @@ def main(
         gtdb_protein_reps=gtdb_protein_reps,
     )
 
-    sample_name = sample_name_from_path(filepath)
-    paths = build_runtime_paths(output_dir, sample_name, filepath)
+    if sample_name is None:
+        sample_name = sample_name_from_path(filepath)
+    paths = build_runtime_paths(
+        output_dir,
+        sample_name,
+        filepath,
+        resources.gtdb_assets.release,
+    )
     reset_tmp_dirs(paths)
 
     try:
@@ -774,7 +1040,8 @@ def main(
 
         gtdb = GTDB(resources.gtdb_assets.metadata_path)
         downloader = NCBIProteomeDownloader(api_key=ncbi_api_key)
-        peptides = reader(filepath, DEFAULT_SCORE_THRESHOLD)
+        provenance: dict[str, PeptideProvenance] = {}
+        peptides = reader(filepath, denovo_score, provenance)
 
         host_db: Path | None = None
         if filter_host is not None:
@@ -782,8 +1049,14 @@ def main(
 
         found_strain_accessions: list[str] = []
         genus_score_points: list[tuple[str, float, bool]] = []
+        peptide_assignments: dict[str, PeptideAssignment] = {}
+        taxonomy_query_ids: tuple[str, ...] = ()
 
-        with paths.result_path.open("w") as out_handle:
+        with (
+            paths.result_path.open("w") as out_handle,
+            paths.peptide_hits_path.open("w", newline="") as peptide_hits_handle,
+        ):
+            write_timestamp(out_handle, "run_started")
             out_handle.write(f"sample\t{sample_name}\n")
             out_handle.write(f"input_file\t{filepath}\n")
             out_handle.write(f"data_format\t{data_format}\n")
@@ -795,6 +1068,7 @@ def main(
             out_handle.write(f"gtdb_protein_reps\t{resources.gtdb_protein_reps}\n")
             out_handle.write(f"filter_contaminants\t{filter_contaminants}\n")
             out_handle.write(f"filter_host\t{filter_host if filter_host is not None else 'NONE'}\n")
+            out_handle.write(f"denovo_score_threshold\t{denovo_score}\n")
             out_handle.write(f"genus_score_threshold\t{genus_score}\n")
             out_handle.write(f"max_iterations\t{max_iterations}\n")
             out_handle.write(f"max_strains\t{max_strains}\n")
@@ -803,6 +1077,7 @@ def main(
             print(f"*** Found {len(peptides)} peptides ***")
 
             if filter_contaminants and peptides:
+                write_timestamp(out_handle, "contaminant_search_started")
                 filter_against_db(
                     peptides=peptides,
                     sample_name=sample_name,
@@ -812,8 +1087,10 @@ def main(
                     label="cRAP",
                     target_db=resources.crap_db_prefix,
                 )
+                write_timestamp(out_handle, "contaminant_search_finished")
 
             if host_db is not None and peptides:
+                write_timestamp(out_handle, "host_search_started")
                 filter_against_db(
                     peptides=peptides,
                     sample_name=sample_name,
@@ -823,7 +1100,9 @@ def main(
                     label="host",
                     target_db=host_db,
                 )
+                write_timestamp(out_handle, "host_search_finished")
 
+            taxonomy_query_ids = tuple(peptides)
             write_peptide_list(peptides, paths.peptides_path)
 
             if not peptides:
@@ -838,12 +1117,14 @@ def main(
                 )
 
                 print("*** Searching MMseqs2 genus DB once ***")
+                write_timestamp(out_handle, "genus_search_started")
                 run_mmseqs_search(
                     genus_query_fasta,
                     resources.gtdb_assets.genus_db_prefix,
                     paths.genus_base_result_file,
                     tmp_dir=paths.tmp_mmseqs_dir,
                 )
+                write_timestamp(out_handle, "genus_search_finished")
 
                 base_genus_result = score_result_file(paths.genus_base_result_file)
                 if base_genus_result is None:
@@ -891,12 +1172,20 @@ def main(
                         best_hit_family = gtdb.family_for_accession(
                             current_genus_result.best_accession
                         )
+                        write_timestamp(
+                            out_handle,
+                            f"iteration_{iteration}_family_db_started",
+                        )
                         family_db = ensure_family_db(
                             gtdb=gtdb,
                             downloader=downloader,
                             family=best_hit_family,
                             paths=paths,
                             gtdb_protein_reps=resources.gtdb_protein_reps,
+                        )
+                        write_timestamp(
+                            out_handle,
+                            f"iteration_{iteration}_family_db_finished",
                         )
 
                         iteration_query_fasta = write_query_fasta(
@@ -908,12 +1197,20 @@ def main(
                         )
 
                         print("\n*** Searching MMseqs2 family DB ***")
+                        write_timestamp(
+                            out_handle,
+                            f"iteration_{iteration}_family_search_started",
+                        )
                         family_result = search_and_score(
                             iteration_query_fasta,
                             family_db,
                             paths.mmseqs_results_dir
                             / f"{sample_name}_iter{iteration}_{best_hit_family}_family.m8",
                             tmp_dir=paths.tmp_mmseqs_dir,
+                        )
+                        write_timestamp(
+                            out_handle,
+                            f"iteration_{iteration}_family_search_finished",
                         )
                         if family_result is None:
                             print("No family matches found!")
@@ -923,6 +1220,10 @@ def main(
                         report_search("family", family_result, out_handle)
 
                         best_hit_species = family_result.best_accession
+                        write_timestamp(
+                            out_handle,
+                            f"iteration_{iteration}_species_db_started",
+                        )
                         species_db = ensure_species_db(
                             gtdb=gtdb,
                             downloader=downloader,
@@ -931,14 +1232,26 @@ def main(
                             paths=paths,
                             gtdb_protein_reps=resources.gtdb_protein_reps,
                         )
+                        write_timestamp(
+                            out_handle,
+                            f"iteration_{iteration}_species_db_finished",
+                        )
 
                         print("\n*** Searching MMseqs2 strain DB ***")
+                        write_timestamp(
+                            out_handle,
+                            f"iteration_{iteration}_strain_search_started",
+                        )
                         strain_result = search_and_score(
                             iteration_query_fasta,
                             species_db,
                             paths.mmseqs_results_dir
                             / f"{sample_name}_iter{iteration}_{best_hit_species}.m8",
                             tmp_dir=paths.tmp_mmseqs_dir,
+                        )
+                        write_timestamp(
+                            out_handle,
+                            f"iteration_{iteration}_strain_search_finished",
                         )
                         if strain_result is None:
                             print("No strain matches found!")
@@ -956,11 +1269,29 @@ def main(
                             )
                         )
 
-                        removed = remove_best_hit_peptides(
+                        active_query_ids = tuple(peptides)
+                        best_query_hits = get_best_query_hits_for_accession(
+                            strain_result.result_file,
+                            strain_result.best_accession,
+                        )
+                        removed_hits = pop_best_hit_peptides(
                             peptides,
                             strain_result.result_file,
                             strain_result.best_accession,
                         )
+                        for query_id in active_query_ids:
+                            if query_id in peptides:
+                                continue
+
+                            target, score = best_query_hits[query_id]
+                            peptide_assignments[query_id] = PeptideAssignment(
+                                iteration=iteration,
+                                mmseqs_target=target,
+                                hit_organism_accession=strain_result.best_accession,
+                                mmseqs_bitscore=score,
+                            )
+
+                        removed = len(removed_hits)
                         print(
                             f"Removing {removed} peptides from peptide list that hit "
                             f"{strain_result.best_accession}"
@@ -976,6 +1307,19 @@ def main(
                         print(message.strip())
                         out_handle.write(message)
 
+            write_peptide_hits(
+                peptide_hits_handle,
+                provenance,
+                taxonomy_query_ids,
+                peptide_assignments,
+            )
+            assigned_peptides = len(peptide_assignments)
+            out_handle.write(f"taxonomy_input_peptides\t{len(taxonomy_query_ids)}\n")
+            out_handle.write(f"assigned_peptides\t{assigned_peptides}\n")
+            out_handle.write(
+                f"unassigned_peptides\t{len(taxonomy_query_ids) - assigned_peptides}\n"
+            )
+
         write_concatenated_strains_fasta(
             accessions=found_strain_accessions,
             downloader=downloader,
@@ -983,5 +1327,7 @@ def main(
             gtdb_protein_reps=resources.gtdb_protein_reps,
         )
         write_genus_score_plot(genus_score_points, genus_score, paths.genus_plot_path, gtdb)
+        with paths.result_path.open("a") as out_handle:
+            write_timestamp(out_handle, "run_finished")
     finally:
         cleanup_work_dir(paths)

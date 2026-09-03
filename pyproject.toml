@@ -15,7 +15,10 @@ authors = [
 dependencies = [
   "pandas>=2.2",
   "numpy>=1.26",
-  "pyyaml>=6.0"
+  "pyyaml>=6.0",
+  "matplotlib>=3.9.1",
+  "requests>=2.32.3",
+  "tqdm>=4.67.1"
 ]
 
 [project.scripts]

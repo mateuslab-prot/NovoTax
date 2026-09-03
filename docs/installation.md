@@ -1,6 +1,6 @@
 # Installation
 
-NovoTax runs as a [**Nextflow**]((https://www.nextflow.io)) pipeline and uses modular **container images** for its software environment.
+NovoTax runs as a [**Nextflow**](https://www.nextflow.io) pipeline and uses modular **container images** for its software environment.
 
 To run NovoTax locally, the following tools are needed:
 
@@ -36,11 +36,11 @@ nextflow -version
 If not, the steps below are enough for a typical installation. If you face problems during this, please refer to the [official documentation](https://docs.seqera.io/nextflow/install).
 
 ### Install Java
-Nextflow requires Java 17 (or later, up to 26). Check which version of Java you have with:
+Nextflow requires Java 17 or later. Check which version of Java you have with:
 ```bash
 java -version
 ```
-If needed, install Java 17 or newer using your system package manager or a JDK distribution of your choice. For example, using:
+If needed, install Java 17 or newer using your system package manager or a JDK distribution of your choice. For example:
 ```bash
 sudo apt install -y openjdk-17-jre-headless
 ```
@@ -71,7 +71,7 @@ nextflow -version
 
 ## 2. Container platform
 
-NovoTax utilises containerisation for reproducability and modularity. There's two main container platforms supported, Apptainer and Docker. If Docker is already installed [and working](#22-docker) we recommend continuing using that. If this is the first time you use containers or work in an HPC environment we instead recommend Apptainer due to easier installation and usage.
+NovoTax uses containers for reproducibility and modularity. Two main container platforms are supported: Apptainer and Docker. If Docker is already installed [and working](#22-docker), we recommend continuing with it. If this is your first time using containers, we recommend Apptainer because it is easier to install and use.
 
 ## 2.1 Apptainer
 
@@ -80,7 +80,7 @@ Check if Apptainer is already available:
 apptainer version
 ```
 
-If not, the steps below is enough for a typical installation. If you face problems during this, please refer to the [official guide](https://apptainer.org/docs/admin/main/installation.html).
+If not, the steps below are enough for a typical installation. If you face problems during this, please refer to the [official guide](https://apptainer.org/docs/admin/main/installation.html).
 
 ### Install Apptainer
 ```bash
@@ -124,24 +124,24 @@ apptainer exec --nv docker://nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
 ```bash
 apptainer exec --nvccli docker://nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
 ```
-If nvidia-smi shows the systems GPU details the Apptainer installation is working correctly with the systems GPUs. You can move on to [verify the setup](#3-verify-the-environment-with-gpu-support) below.
+If nvidia-smi shows the system's GPU details, the Apptainer installation is working correctly with the system's GPUs. You can move on to [verify the setup](#3-verify-the-environment-with-gpu-support) below.
 
 ## 2.2 Docker
-If you prefer to run Docker, or Docker is already installed on your system, this is also supported. Please make sure that your docker installation can access the systems GPUs with:
+If you prefer to run Docker, or Docker is already installed on your system, this is also supported. Make sure that Docker can access the system's GPUs with:
 ```bash
 docker run --rm --gpus all nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
 ```
-If this works, you can move on to [verify the environment](#3-verify-the-environment-with-gpu)! If this does not work, please refer to the official documentation to make sure that [rootless Docker](https://docs.docker.com/engine/security/rootless/) and the [NVIDA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) is set up correctly.
+If this works, you can move on to [verify the environment](#3-verify-the-environment-with-gpu-support). If it does not, refer to the official documentation for [rootless Docker](https://docs.docker.com/engine/security/rootless/) and the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html).
 
 ## 3. Verify the environment with GPU support
 
-Before running NovoTax, make sure the foillowing commands work:
+Before running NovoTax, make sure the following commands work:
 
 ```bash
 nextflow -version
 ```
 
-## If using Apptainer
+### If using Apptainer
 
 **Ubuntu**
 ```bash
@@ -153,7 +153,7 @@ apptainer exec --nv docker://nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
 apptainer exec --nv --nvccli docker://nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
 ```
 
-## If using Docker
+### If using Docker
 ```bash
 docker run --rm --gpus all nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
 ```
@@ -161,7 +161,7 @@ docker run --rm --gpus all nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
 ## 4. Setting up NovoTax
 
 ### Cloning NovoTax
-For full flexibility we recommend cloning NovoTax to your local system and work from within this directory:
+For full flexibility, we recommend cloning NovoTax to your local system and working from within this directory:
 ```bash
 git clone https://github.com/mateuslab-prot/NovoTax/
 ```
@@ -169,12 +169,17 @@ git clone https://github.com/mateuslab-prot/NovoTax/
 cd NovoTax
 ```
 
-### Build genus database
-NovoTax uses [**GTDB**](https://gtdb.ecogenomic.org) as the database for proteomes and phylogenetic information. To run NovoTax, this database first needs to be prepared. Then, the path to the database is supplied with the `--gtdb_dir PATH` flag.
+### Download GTDB representative proteins
+NovoTax uses [**GTDB**](https://gtdb.ecogenomic.org) for reference proteomes and taxonomic information. Two paths are required when running NovoTax:
+
+- `--gtdb_protein_reps`: the extracted GTDB representative protein FASTA directory
+- `--gtdb_db_dir`: the NovoTax database directory created in the next section
+
+Both paths must refer to the same GTDB release. The analyses in the NovoTax manuscript used **r226**, so the example below uses r226 throughout. Other releases are supported, but a database built for one release must not be combined with representative protein files from another.
 
 1. Go to [GTDB downloads](https://gtdb.ecogenomic.org/downloads) and select the mirror best suited to you.
-2. Choose the release you want to use. For the analysis made in the NovoTax paper **r226** was used, but for best coverage we recommend using the latest release (at the time of writing **r232**).
-3. Go to `genomic_files_reps` and download the `gtdb_proteins_aa_reps_r226.tar.gz` (**87.5GB**) or equivalent file for your chosen release. Or directly from the terminal using your prefered tool, for example:
+2. Choose the release you want to use.
+3. Go to `genomic_files_reps` and download the representative-protein archive for that release. For r226, this is `gtdb_proteins_aa_reps_r226.tar.gz` (**87.5 GB**). For example:
 ```bash
 wget https://data.gtdb.ecogenomic.org/releases/release226/226.0/genomic_files_reps/gtdb_proteins_aa_reps_r226.tar.gz
 ```
@@ -189,33 +194,45 @@ find protein_faa_reps/{bacteria,archaea} -maxdepth 1 -type f -name '*.faa.gz' -e
 6. Remove the archive:
 ```bash
 rm gtdb_proteins_aa_reps_r226.tar.gz
-````
+```
 
 ### Building the genus representatives database
 The genus representatives database is now ready to be constructed (please make sure you [**use the profile and paths appropriate for your system**](usage.md#flags)):
 ```bash
-nextflow run main.nf --create_dbs novotax_db_r226 --gtdb_protein_reps /data/dbs/gtdb/release226/protein_faa_reps --gtdb_release 226
+nextflow run main.nf \
+  --create_dbs novotax_db_r226 \
+  --gtdb_protein_reps /data/dbs/gtdb/release226/protein_faa_reps \
+  --gtdb_release 226
 ```
 Example output on success:  
 <img src="../assets/images/nextflow_db_creation_output.png" alt="Nextflow database creation output example">
 
-## 5. Test with example data
-If the environment is working correctly, you can run a short demo using example data. Doing this will also download all the containers required to run NovoTax, making subsequent runs quicker to run.
+The command above builds an r226 database. For another release, update the archive, `--gtdb_release`, database directory name, and `--gtdb_protein_reps` path consistently. The directory supplied to `--create_dbs` is subsequently passed to NovoTax as `--gtdb_db_dir`.
 
-Run NovoTax on the example data using the profile that matches your environment
-- `-profile apptainer_gpu` **(default)**: Apptainer on Ubuntu using
-- `-profile apptainer_wsl_gpu`: Apptainer on WSL using GPU
-- `-profile docker_gpu`: Docker on Ubuntu/WSL using GPU
+## 5. Test with example data
+If the environment is working correctly, you can run a short demo using example data. This also downloads the containers required by NovoTax, making subsequent runs faster.
+
+Run NovoTax on the example data using the profile that matches your environment:
+- `-profile apptainer_gpu`: Apptainer on Ubuntu using GPU
+- `-profile apptainer_wsl_gpu`: Apptainer on WSL2 using GPU
+- `-profile docker_gpu`: Docker on Ubuntu or WSL2 using GPU
+
+The following command uses the WSL/Apptainer profile; replace the profile if needed:
 
 ```bash
-nextflow run main.nf -profile apptainer_wsl_gpu --input examples/samples.tsv --output_dir example_results/ --gtdb_protein_reps /data/dbs/gtdb/release226/protein_faa_reps --gtdb_db_dir novotax_db_r226
+nextflow run main.nf \
+  -profile apptainer_wsl_gpu \
+  --input examples/samples.tsv \
+  --output_dir example_results/ \
+  --gtdb_protein_reps /data/dbs/gtdb/release226/protein_faa_reps \
+  --gtdb_db_dir novotax_db_r226
 ```
 
 <img src="../assets/images/nextflow_novotax_output.png" alt="Nextflow NovoTax output example">
 
-**Note that the first NovoTax run will take a longer time due to first having to retrieve all the containers. Expect the download to take 10-15 minutes and then the demo files takes roughly ~5 minutes to run on a modern desktop GPU.**
+**The first NovoTax run takes longer because the containers must be downloaded. Expect the download to take 10-15 minutes and the demo to take roughly 5 minutes on a modern desktop GPU.**
 
-The results will be written to the folder `demo_results/`. For more details on the outputs generated by NovoTax, please read the [output section](usage.md#output) of the documentation.
+The results will be written to the folder `example_results/`. For more details on the outputs generated by NovoTax, please read the [output section](usage.md#output) of the documentation.
 
 ## Running NovoTax
 You're now ready to run [NovoTax on your own data](usage.md)!

@@ -18,12 +18,35 @@ results/
 .apptainer_cache/
 
 # Local data / test runs
+berzelius/
+cache/
+.novotax_cache/
 test_run/
 data/
+protein_faa_reps/
+novotax_db_r*/
+example_results/
+extended_example_results/
 tmp/
 temp/
 results/
 scripts/data/
+
+# Python build / environments
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.venv/
+venv/
+env/
+
+# Secrets / local environment
+.env
+.env.*
+*.local
 
 # OS / editors
 .DS_Store

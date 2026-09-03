@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
 
+
+def accession_from_target(target: str) -> str:
+    return "_".join(target.split("_")[:3])
+
+
 def get_mmseqs_hits(file_path):
     hits = set()
     with open(file_path) as f:
@@ -62,7 +67,7 @@ def get_scores(file_path, reverse=False, peptides=None, normalize=True):
             hit = parts[1]
             bitscore = float(parts[-1])
 
-            accession = "_".join(hit.split("_")[:3])
+            accession = accession_from_target(hit)
 
             if query not in seen:
                 seen[query] = set()
@@ -77,6 +82,50 @@ def get_scores(file_path, reverse=False, peptides=None, normalize=True):
                 seen[query].add(accession)
 
     return scores
+
+
+def get_best_query_scores_for_accession(file_path, accession: str) -> dict[str, float]:
+    scores: dict[str, float] = {}
+
+    with open(file_path) as handle:
+        for line in handle:
+            parts = line.rstrip("\n").split("\t")
+            if len(parts) < 3:
+                continue
+
+            query, target = parts[0], parts[1]
+            if query.startswith("rev_") or accession not in target:
+                continue
+
+            score = float(parts[-1])
+            scores[query] = max(score, scores.get(query, score))
+
+    return scores
+
+
+def get_best_query_hits_for_accession(
+    file_path,
+    accession: str,
+) -> dict[str, tuple[str, float]]:
+    """Return best supporting targets without affecting accession scoring."""
+    hits: dict[str, tuple[str, float]] = {}
+
+    with open(file_path) as handle:
+        for line in handle:
+            parts = line.rstrip("\n").split("\t")
+            if len(parts) < 3:
+                continue
+
+            query, target = parts[0], parts[1]
+            if query.startswith("rev_") or accession not in target:
+                continue
+
+            score = float(parts[-1])
+            current = hits.get(query)
+            if current is None or score > current[1]:
+                hits[query] = (target, score)
+
+    return hits
 
 def get_scores_from_list(data_list, reverse=False, peptides=None):
     scores = {}

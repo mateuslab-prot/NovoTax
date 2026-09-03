@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import argparse
 import inspect
+import math
+import re
 from pathlib import Path
 
 
@@ -24,6 +26,29 @@ def positive_int(value: str) -> int:
     if parsed < 1:
         raise argparse.ArgumentTypeError("Expected a positive integer")
     return parsed
+
+
+def probability(value: str) -> float:
+    try:
+        parsed = float(value)
+    except ValueError as error:
+        raise argparse.ArgumentTypeError(
+            "Expected a finite number between 0 and 1"
+        ) from error
+
+    if not math.isfinite(parsed) or not 0.0 <= parsed <= 1.0:
+        raise argparse.ArgumentTypeError("Expected a finite number between 0 and 1")
+
+    return parsed
+
+
+def sample_name_component(value: str) -> str:
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", value):
+        raise argparse.ArgumentTypeError(
+            "Expected a name starting with a letter or number and containing only "
+            "letters, numbers, periods, underscores, or hyphens"
+        )
+    return value
 
 
 def existing_dir(value: str) -> Path:
@@ -88,12 +113,18 @@ def build_parser() -> argparse.ArgumentParser:
 
     classify_parser = subparsers.add_parser(
         "classify",
-        help="Run classification on the given de novo peptide result file",
+        help="Run classification on a de novo result or peptide-score file",
     )
     classify_parser.add_argument(
         "filepath",
         type=existing_path,
-        help="Input de novo peptide result file to classify",
+        help="Input de novo result or peptide-score TSV file to classify",
+    )
+    classify_parser.add_argument(
+        "--sample_name",
+        type=sample_name_component,
+        default=None,
+        help="Output sample name (default: derived from the input path)",
     )
     classify_parser.add_argument(
         "-o",
@@ -140,6 +171,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--ncbi_api_key",
         default=None,
         help="NCBI API key for proteome downloading (default: none)",
+    )
+    classify_parser.add_argument(
+        "--denovo_score",
+        type=probability,
+        default=0.8,
+        help="Minimum de novo peptide score to retain (default: 0.8)",
     )
     classify_parser.add_argument(
         "--genus_score",
@@ -196,9 +233,11 @@ def run_classify(
     filter_contaminants: bool,
     filter_host: Path | None,
     ncbi_api_key: str | None,
+    denovo_score: float,
     genus_score: float,
     max_iterations: int,
     max_strains: int,
+    sample_name: str | None = None,
 ) -> None:
     from NovoTax.core.classify import main as classify_main
 
@@ -215,11 +254,13 @@ def run_classify(
     classify_main(
         filepath=filepath,
         output_dir=output_dir,
+        sample_name=sample_name,
         gtdb_db_dir=gtdb_db_dir,
         gtdb_protein_reps=gtdb_protein_reps,
         filter_contaminants=filter_contaminants,
         filter_host=filter_host,
         ncbi_api_key=ncbi_api_key,
+        denovo_score=denovo_score,
         genus_score=genus_score,
         max_iterations=max_iterations,
         max_strains=max_strains,
@@ -242,11 +283,13 @@ def main() -> None:
         run_classify(
             filepath=args.filepath,
             output_dir=args.output_dir,
+            sample_name=args.sample_name,
             gtdb_db_dir=args.gtdb_db_dir,
             gtdb_protein_reps=args.gtdb_protein_reps,
             filter_contaminants=args.filter_contaminants,
             filter_host=args.filter_host,
             ncbi_api_key=args.ncbi_api_key,
+            denovo_score=args.denovo_score,
             genus_score=args.genus_score,
             max_iterations=args.max_iterations,
             max_strains=args.max_strains,
