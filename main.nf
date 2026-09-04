@@ -350,7 +350,7 @@ process CREATE_NOVOTAX_DBS {
 workflow {
     if (runningCreateDbs) {
         CREATE_NOVOTAX_DBS(
-            Channel.value(params.gtdb_release ?: 226),
+            Channel.value(params.gtdb_release ?: 232),
             Channel.value(file(gtdbProteinRepsPath))
         )
     } else {

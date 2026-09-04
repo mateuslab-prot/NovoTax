@@ -9,7 +9,7 @@ import re
 from pathlib import Path
 
 
-DEFAULT_GTDB_RELEASE = 226
+DEFAULT_GTDB_RELEASE = 232
 
 
 def parse_bool(value: str) -> bool:

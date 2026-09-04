@@ -68,8 +68,8 @@ for matching.
 nextflow run main.nf \
   --input examples/samples.tsv \
   --output_dir example_results \
-  --gtdb_protein_reps /data/dbs/gtdb/release226/protein_faa_reps \
-  --gtdb_db_dir novotax_db_r226
+  --gtdb_protein_reps /data/dbs/gtdb/release232/protein_faa_reps \
+  --gtdb_db_dir novotax_db_r232
 ```
 
 ## Output

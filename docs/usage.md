@@ -6,7 +6,7 @@ The base command for running NovoTax is `nextflow run mateuslab-prot/NovoTax`. T
 
 **One-time database setup**  
 `--create_dbs PATH` - Creates the GTDB genus database locally at the chosen path. This mode also requires `--gtdb_protein_reps`. The database size is **~20GB**.  
-`--gtdb_release int` - GTDB release used when creating the database (default: **226**).  
+`--gtdb_release int` - GTDB release used when creating the database (default: **232**).  
 
 **Profiles**  
 Apptainer with GPU support is configured by default. The following profiles can be selected explicitly:  

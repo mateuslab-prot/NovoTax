@@ -175,17 +175,17 @@ NovoTax uses [**GTDB**](https://gtdb.ecogenomic.org) for reference proteomes and
 - `--gtdb_protein_reps`: the extracted GTDB representative protein FASTA directory
 - `--gtdb_db_dir`: the NovoTax database directory created in the next section
 
-Both paths must refer to the same GTDB release. The analyses in the NovoTax manuscript used **r226**, so the example below uses r226 throughout. Other releases are supported, but a database built for one release must not be combined with representative protein files from another.
+Both paths must refer to the same GTDB release. The analyses in the revised NovoTax manuscript used **r232**, so the example below uses r232 throughout. Other releases are supported, but a database built for one release must not be combined with representative protein files from another.
 
 1. Go to [GTDB downloads](https://gtdb.ecogenomic.org/downloads) and select the mirror best suited to you.
 2. Choose the release you want to use.
-3. Go to `genomic_files_reps` and download the representative-protein archive for that release. For r226, this is `gtdb_proteins_aa_reps_r226.tar.gz` (**87.5 GB**). For example:
+3. Go to `genomic_files_reps` and download the representative-protein archive for that release. For r232, this is `gtdb_proteins_aa_reps_r232.tar.gz` (**122.9 GB**). For example:
 ```bash
-wget https://data.gtdb.ecogenomic.org/releases/release226/226.0/genomic_files_reps/gtdb_proteins_aa_reps_r226.tar.gz
+wget https://data.gtdb.ecogenomic.org/releases/release232/232.0/genomic_files_reps/gtdb_proteins_aa_reps_r232.tar.gz
 ```
 4. Extract the files:
 ```bash
-tar xzf gtdb_proteins_aa_reps_r226.tar.gz
+tar xzf gtdb_proteins_aa_reps_r232.tar.gz
 ```
 5. Bacteria and archaea are separated by default, combine them into one folder:
 ```bash
@@ -193,21 +193,21 @@ find protein_faa_reps/{bacteria,archaea} -maxdepth 1 -type f -name '*.faa.gz' -e
 ``` 
 6. Remove the archive:
 ```bash
-rm gtdb_proteins_aa_reps_r226.tar.gz
+rm gtdb_proteins_aa_reps_r232.tar.gz
 ```
 
 ### Building the genus representatives database
 The genus representatives database is now ready to be constructed (please make sure you [**use the profile and paths appropriate for your system**](usage.md#flags)):
 ```bash
 nextflow run main.nf \
-  --create_dbs novotax_db_r226 \
-  --gtdb_protein_reps /data/dbs/gtdb/release226/protein_faa_reps \
-  --gtdb_release 226
+  --create_dbs novotax_db_r232 \
+  --gtdb_protein_reps /data/dbs/gtdb/release232/protein_faa_reps \
+  --gtdb_release 232
 ```
 Example output on success:  
 <img src="../assets/images/nextflow_db_creation_output.png" alt="Nextflow database creation output example">
 
-The command above builds an r226 database. For another release, update the archive, `--gtdb_release`, database directory name, and `--gtdb_protein_reps` path consistently. The directory supplied to `--create_dbs` is subsequently passed to NovoTax as `--gtdb_db_dir`.
+The command above builds an r232 database. For another release, update the archive, `--gtdb_release`, database directory name, and `--gtdb_protein_reps` path consistently. The directory supplied to `--create_dbs` is subsequently passed to NovoTax as `--gtdb_db_dir`.
 
 ## 5. Test with example data
 If the environment is working correctly, you can run a short demo using example data. This also downloads the containers required by NovoTax, making subsequent runs faster.
@@ -224,8 +224,8 @@ nextflow run main.nf \
   -profile apptainer_wsl_gpu \
   --input examples/samples.tsv \
   --output_dir example_results/ \
-  --gtdb_protein_reps /data/dbs/gtdb/release226/protein_faa_reps \
-  --gtdb_db_dir novotax_db_r226
+  --gtdb_protein_reps /data/dbs/gtdb/release232/protein_faa_reps \
+  --gtdb_db_dir novotax_db_r232
 ```
 
 <img src="../assets/images/nextflow_novotax_output.png" alt="Nextflow NovoTax output example">
