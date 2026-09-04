@@ -27,6 +27,7 @@ For more detailed instructions, please refer to the documentation:
 - [`Installation`](docs/installation.md)
 - [`Usage`](docs/usage.md)
 - [`Example`](docs/example.md)
+- [`Tools and software versions`](docs/tools.md)
 
 ## Quick start
 

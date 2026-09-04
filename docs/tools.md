@@ -2,6 +2,45 @@
 
 NovoTax utilises several tools during the pipeline, mainly for the de novo peptide sequencing steps. They are described below and any adaptations made are listed.
 
+## Versions used in the revised manuscript
+
+### NovoTax pipeline
+
+| Component | Version or container image |
+|---|---|
+| NovoTax | `densve/novotax:v1.1.4` |
+| XuanjiNovo | `densve/xuanjinovo-novotax:cuda11_v1.1.4` |
+| Cascadia | `densve/cascadia-novotax:cuda11_v1.1` |
+| MMseqs2 | 18.8cc5c |
+| NCBI Datasets CLI | 18.23.0 |
+| GTDB | Release 232 |
+| Python | 3.12.14 |
+| pandas | 2.2.3 |
+| NumPy | 2.5.2 |
+| requests | 2.32.3 |
+| tqdm | 4.67.1 |
+
+### Pipeline environment
+
+| Component | Version |
+|---|---|
+| Nextflow | 26.04.4, build 12445 |
+| Java | 17.0.7 |
+| Apptainer | 1.5.3-3.el8 |
+
+### Traditional proteomics searches
+
+| Component | Version |
+|---|---|
+| FragPipe | 24.0, Basic-Search workflow with IonQuant for quantification, normalized between runs |
+
+### Unipept comparison
+
+| Component | Version |
+|---|---|
+| Unipept | 6.5.3 |
+| UniProt | Release 2026_02 |
+
 ## [XuanjiNovo](https://github.com/guomics-lab/MassNet-DDA)
 For data-dependent acquisition XuanjiNovo is used.
 
