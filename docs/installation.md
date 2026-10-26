@@ -209,6 +209,8 @@ Example output on success:
 
 The command above builds an r232 database. For another release, update the archive, `--gtdb_release`, database directory name, and `--gtdb_protein_reps` path consistently. The directory supplied to `--create_dbs` is subsequently passed to NovoTax as `--gtdb_db_dir`.
 
+New databases retain `ncbi_taxonomy` in `GTDB_r<release>_filtered_metadata.tsv` for species names in plot labels. Older metadata files remain usable, but show `NCBI species unavailable`. To add these names to an existing database, join the `ncbi_taxonomy` column from the original GTDB metadata for the same release onto the filtered TSV by `accession`. The MMseqs sequence database does not need rebuilding.
+
 ## 5. Test with example data
 If the environment is working correctly, you can run a short demo using example data. This also downloads the containers required by NovoTax, making subsequent runs faster.
 

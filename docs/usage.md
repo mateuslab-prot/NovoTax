@@ -4,32 +4,32 @@
 
 The base command for running NovoTax is `nextflow run mateuslab-prot/NovoTax`. To control the input, output and models used, the following flags are available:
 
-**One-time database setup**  
-`--create_dbs PATH` - Creates the GTDB genus database locally at the chosen path. This mode also requires `--gtdb_protein_reps`. The database size is **~20GB**.  
-`--gtdb_release int` - GTDB release used when creating the database (default: **232**).  
+**One-time database setup**\
+`--create_dbs PATH` - Creates the GTDB genus database locally at the chosen path. This mode also requires `--gtdb_protein_reps`. The database size is **~20GB**.\
+`--gtdb_release int` - GTDB release used when creating the database (default: **232**).\
 
-**Profiles**  
-Apptainer with GPU support is configured by default. The following profiles can be selected explicitly:  
-`-profile apptainer_gpu`: Apptainer on Ubuntu using GPU.  
-`-profile apptainer_wsl_gpu`: Apptainer on WSL using GPU.  
+**Profiles**\
+Apptainer with GPU support is configured by default. The following profiles can be selected explicitly:\
+`-profile apptainer_gpu`: Apptainer on Ubuntu using GPU.\
+`-profile apptainer_wsl_gpu`: Apptainer on WSL using GPU.\
 `-profile docker_gpu`: Docker on Ubuntu/WSL using GPU.
 
-**Mandatory**  
-`--input` - Path to the .tsv file containing the sample inputs, [see **input** section below](#input).  
-`--gtdb_db_dir` - Directory produced by `--create_dbs`, [containing the GTDB metadata and MMseqs database](installation.md#4-setting-up-novotax).  
-`--gtdb_protein_reps` - [Directory containing GTDB representative](installation.md#4-setting-up-novotax) proteome FASTA files (e.g. `protein_faa_reps/`).  
+**Mandatory**\
+`--input` - Path to the .tsv file containing the sample inputs, [see **input** section below](#input).\
+`--gtdb_db_dir` - Directory produced by `--create_dbs`, [containing the GTDB metadata and MMseqs database](installation.md#4-setting-up-novotax).\
+`--gtdb_protein_reps` - [Directory containing GTDB representative](installation.md#4-setting-up-novotax) proteome FASTA files (e.g. `protein_faa_reps/`).\
 
-**Optional**  
-`--output_dir PATH` - Directory where results will be written (default: **./results**).  
-`--xuanjinovo_model_file PATH` - Path to a XuanjiNovo model file, [see **models** section below](#models).  
-`--cascadia_model_file PATH` - Path to a Cascadia model file, [see **models** section below](#models).  
-`--filter_contaminants true/false` - Filter [cRAP contaminants](https://www.thegpm.org/crap/) (default **true**). Can be turned off if the sample is expected to be of high purity.  
-`--filter_host PATH` - Path to a host FASTA file or directory of FASTA files used to filter host-related peptides (default: **NONE**).  
-`--ncbi_api_key KEY` - [NCBI API key](https://www.ncbi.nlm.nih.gov/datasets/docs/v2/api/api-keys/) to increase rate limits and access to NCBI servers.  
-`--genus_score float` - Min. value of genus score for the search iterations to continue (default: **1275**).  
-`--max_iterations int` - Max. number of iterations before NovoTax halts (default: **20**).  
-`--max_strains int` - Max. number of strains downloaded per species (default: **1000**).  
-`--denovo_score float` - Minimum peptide score to retain for DDA, DIA, and peptide-score inputs. Must be a finite value from 0 to 1 (default: **0.8**).  
+**Optional**\
+`--output_dir PATH` - Directory where results will be written (default: **./results**).\
+`--xuanjinovo_model_file PATH` - Path to a XuanjiNovo model file, [see **models** section below](#models).\
+`--cascadia_model_file PATH` - Path to a Cascadia model file, [see **models** section below](#models).\
+`--filter_contaminants true/false` - Filter [cRAP contaminants](https://www.thegpm.org/crap/) (default **true**). Can be turned off if the sample is expected to be of high purity.\
+`--filter_host PATH` - Path to a host FASTA file or directory of FASTA files used to filter host-related peptides (default: **NONE**).\
+`--ncbi_api_key KEY` - [NCBI API key](https://www.ncbi.nlm.nih.gov/datasets/docs/v2/api/api-keys/) to increase rate limits and access to NCBI servers.\
+`--genus_score float` - Min. value of genus score for the search iterations to continue (default: **1275**).\
+`--max_iterations int` - Max. number of iterations before NovoTax halts (default: **20**).\
+`--max_strains int` - Max. number of strains downloaded per species (default: **1000**).\
+`--denovo_score float` - Minimum peptide score to retain for DDA, DIA, and peptide-score inputs. Must be a finite value from 0 to 1 (default: **0.8**).\
 `--cache_dir PATH` - Persistent cache for downloaded proteomes, derived MMseqs databases, and reusable search files (default: **.novotax_cache** in the pipeline directory). Cache contents are separated by GTDB release.
 
 ## Input
@@ -84,10 +84,10 @@ NovoTax creates one folder per sample:
 `peptide_hits.tsv` contains one row for every peptide observation remaining after
 the configured cRAP and host filtering. It records the source identifier, original
 and searched sequence, input score, and whether the peptide was assigned to a
-selected strain. For assigned rows, the MMseqs target and bit score describe the
-best supporting hit within that strain; they are provenance fields rather than the
-accession score used to select the strain. Repeated peptide observations remain
-separate rows. An `unassigned` row was not assigned to a selected strain, but may
+selected proteome. For assigned rows, the MMseqs target and bit score describe the
+best supporting hit within that proteome; they are provenance fields rather than the
+accession score used to select the proteome. Repeated peptide observations remain
+separate rows. An `unassigned` row was not assigned to a selected proteome, but may
 still have MMseqs matches. `results.tsv` records run settings, timestamps, top
 search hits, iteration summaries, and the total taxonomic input, assigned, and
 unassigned peptide-observation counts.

@@ -1,4 +1,4 @@
-# NovoTax: prokaryotic strain identification from mass spectrometry-based proteomics data
+# NovoTax: sample-specific database construction for prokaryotic mass spectrometry-based proteomics
 
 Welcome! If you find any issues with this first release, please do not hesitate to open an issue or contact us directly (`dennis.svedberg at umu.se`)
 
@@ -6,9 +6,9 @@ Welcome! If you find any issues with this first release, please do not hesitate 
 
 <img src="assets/images/workflow.png" alt="NovoTax workflow" height="500">
 
-**NovoTax** is a modular pipeline for identifying prokaryotic strains from mass spectrometry-based proteomics data.
+**NovoTax** is a modular pipeline for building a compact database matched to the sample directly from mass spectrometry-based proteomics data.
 
-The full NovoTax workflow is designed to go from mass spectrometry data to taxonomic assignment and a sample-specific protein database for downstream analysis.
+The full NovoTax workflow is designed to go from mass spectrometry data to a sample-specific protein database for downstream analysis.
 
 ## Why use it?
 
@@ -94,10 +94,10 @@ NovoTax creates one folder per sample:
 `peptide_hits.tsv` contains one row for every peptide observation remaining after
 the configured cRAP and host filtering. It records the source identifier, original
 and searched sequence, input score, and whether the peptide was assigned to a
-selected strain. For assigned rows, the MMseqs target and bit score describe the
-best supporting hit within that strain; they are provenance fields rather than the
-accession score used to select the strain. Repeated peptide observations remain
-separate rows. An `unassigned` row was not assigned to a selected strain, but may
+selected proteome. For assigned rows, the MMseqs target and bit score describe the
+best supporting hit within that proteome; they are provenance fields rather than the
+accession score used to select the proteome. Repeated peptide observations remain
+separate rows. An `unassigned` row was not assigned to a selected proteome, but may
 still have MMseqs matches. `results.tsv` records run settings, timestamps, top
 search hits, iteration summaries, and the total taxonomic input, assigned, and
 unassigned peptide-observation counts.

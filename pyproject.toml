@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "novotax"
-version = "1.1.4"
-description = "NovoTax: taxonomic identification from proteomics-derived peptide results"
+version = "1.1.5"
+description = "NovoTax: sample-specific database construction for prokaryotic mass spectrometry-based proteomics"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }

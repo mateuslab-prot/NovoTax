@@ -100,6 +100,16 @@ class GTDB:
         gtdb_metadata["family"] = gtdb_metadata["gtdb_taxonomy"].str.extract(r";f__([^;]+)")
         gtdb_metadata["genus"] = gtdb_metadata["gtdb_taxonomy"].str.extract(r";g__([^;]+)")
         gtdb_metadata["species"] = gtdb_metadata["gtdb_taxonomy"].str.extract(r";s__([^;]+)$")
+        if "ncbi_taxonomy" in gtdb_metadata.columns:
+            gtdb_metadata["ncbi_species"] = (
+                gtdb_metadata["ncbi_taxonomy"]
+                .astype("string")
+                .str.extract(r"(?:^|;)\s*s__([^;]+)", expand=False)
+                .str.strip()
+            )
+        else:
+            # Older filtered metadata files did not retain NCBI taxonomy.
+            gtdb_metadata["ncbi_species"] = None
         return gtdb_metadata
 
     def resolve_accession(self, accession: str) -> str:
@@ -122,6 +132,17 @@ class GTDB:
             return None
 
         species = self.metadata.at[resolved, "species"]
+        if isinstance(species, str) and species:
+            return species
+        return None
+
+    def ncbi_species_for_accession(self, accession: str) -> str | None:
+        try:
+            resolved = self.resolve_accession(accession)
+        except KeyError:
+            return None
+
+        species = self.metadata.at[resolved, "ncbi_species"]
         if isinstance(species, str) and species:
             return species
         return None

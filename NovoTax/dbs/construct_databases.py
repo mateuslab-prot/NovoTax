@@ -20,6 +20,7 @@ COLUMNS_TO_KEEP = [
     "gtdb_genome_representative",
     "gtdb_type_species_of_genus",
     "gtdb_taxonomy",
+    "ncbi_taxonomy",
     "checkm2_completeness",
     "checkm2_contamination",
     "protein_count",

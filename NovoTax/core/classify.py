@@ -9,6 +9,7 @@ import os
 import random
 import re
 import shutil
+import textwrap
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -658,38 +659,53 @@ def write_genus_score_plot(
 ) -> None:
     ensure_parent(output_path)
 
-    plt.figure(figsize=(10, 5.5))
-
     if not score_points:
-        plt.text(0.5, 0.5, "No genus scores to plot", ha="center", va="center")
-        plt.axis("off")
+        fig, ax = plt.subplots(figsize=(10, 5.5))
+        ax.text(0.5, 0.5, "No genus scores to plot", ha="center", va="center")
+        ax.axis("off")
     else:
         x_values = list(range(1, len(score_points) + 1))
         y_values = [max(score, 1e-12) for _, score, _ in score_points]
-
-        plt.plot(x_values, y_values, linestyle=":", marker="o")
-        plt.axhline(threshold, linestyle="--", linewidth=1)
-
-        for x_value, y_value, (accession, _, accepted) in zip(x_values, y_values, score_points):
+        labels = []
+        for iteration, (accession, _, accepted) in enumerate(score_points, start=1):
             species = gtdb.species_for_accession(accession) or "unknown species"
+            ncbi_species = gtdb.ncbi_species_for_accession(accession) or "NCBI species unavailable"
             suffix = "" if accepted else " (filtered)"
-            plt.annotate(
-                f"{accession} - {species}{suffix}",
-                xy=(x_value, y_value),
-                xytext=(6, 4),
-                textcoords="offset points",
-                fontsize=8,
+            labels.append(
+                textwrap.fill(
+                    f"{iteration}. {accession} - {species} ({ncbi_species}){suffix}",
+                    width=110,
+                    subsequent_indent="    ",
+                    break_long_words=False,
+                    break_on_hyphens=False,
+                )
             )
 
-        plt.yscale("log")
-        plt.xlabel("Iteration")
-        plt.ylabel("Genus score")
-        plt.title("Genus scores for found strains")
-        plt.xticks(x_values)
+        # Reserve a separate panel with enough height for every wrapped line.
+        line_count = sum(label.count("\n") + 1 for label in labels)
+        label_height = 0.3 + 0.18 * line_count
+        fig, (ax, label_ax) = plt.subplots(
+            2, 1,
+            figsize=(10, 5.5 + label_height),
+            gridspec_kw={"height_ratios": [4.5, label_height]},
+        )
+        ax.plot(x_values, y_values, linestyle=":", marker="o")
+        ax.axhline(threshold, linestyle="--", linewidth=1)
+        ax.set_yscale("log")
+        ax.set_xlabel("Iteration")
+        ax.set_ylabel("Genus score")
+        ax.set_title("Genus scores for best matching proteomes")
+        ax.set_xticks(x_values)
+        label_ax.axis("off")
+        label_ax.text(
+            0, 1, "\n".join(labels),
+            transform=label_ax.transAxes,
+            ha="left", va="top", fontsize=8, linespacing=1.4,
+        )
 
-    plt.tight_layout()
-    plt.savefig(output_path, dpi=300)
-    plt.close()
+    fig.tight_layout(h_pad=2)
+    fig.savefig(output_path, dpi=300, bbox_inches="tight")
+    plt.close(fig)
 
 
 def write_query_fasta(
@@ -733,6 +749,7 @@ def run_mmseqs_search(
 
 
 def score_result_file(result_file: Path) -> SearchResult | None:
+    # TODO Handling for palindromic sequences and decoys that occurs in the searched peptides
     decoy_scores = get_scores(result_file, reverse=True, normalize=False)
     hit_scores = get_scores(result_file, normalize=False)
 

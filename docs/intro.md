@@ -1,19 +1,19 @@
 # NovoTax
 
-NovoTax is a pipeline for identifying the **closest prokaryotic strains** present in a sample directly from **mass spectrometry-based proteomics data**. Starting from DDA spectra in MGF format or DIA data in mzML format, it performs **de novo peptide sequencing** and maps the resulting peptides to reference proteomes in **GTDB** to infer taxonomy. NovoTax is designed as an end-to-end workflow that produces a sample-specific taxonomic assignment and a matching protein database for downstream proteomics analysis.
+NovoTax is a pipeline for **building a compact sample specific protein database** directly from **mass spectrometry-based proteomics data**. Starting from DDA spectra in MGF format or DIA data in mzML format, it performs **de novo peptide sequencing** and maps the resulting peptides to reference proteomes in **GTDB** to find the best matching proteomes. NovoTax is designed as an end-to-end workflow that produces a sample-specific, matching protein database for downstream proteomics analysis.
 
 ## What NovoTax does
 
-NovoTax is built for cases where you do not already know which organism is present in the sample, or when you want to confirm that the expected strain is actually there without contaminations.
+NovoTax is built for cases where you do not already know which organism is present in the sample, or when you want to investigate whether the sample matches the expected organism and whether additional proteomes are supported.
 
 With the default workflow, NovoTax:
 
 - takes DDA spectra in MGF format or DIA data in mzML format as input
 - performs de novo peptide sequencing
 - searches those peptides against GTDB
-- assigns the closest matching strain
+- assigns the closest matching proteome
 - can continue on remaining unmatched peptides to detect additional organisms
-- provides a strain-level result that can be used for downstream database-based proteomics searches
+- provides a protein fasta that can be used for downstream database-based proteomics searches
 
 ## Workflow overview
 
@@ -38,17 +38,17 @@ NovoTax matches peptides against [**GTDB**](https://gtdb.ecogenomic.org/) using 
 
 This reduces search space, improves speed, and lowers memory and disk use.
 
-### 3. Taxonomy assignment
+### 3. Proteome selection
 
-NovoTax scores each accession by summing peptide-alignment bitscores and subtracting the corresponding sum for reversed decoy peptides. Negative adjusted scores are set to zero. The best-supported proteome is selected at each step. After strain assignment, matched peptides are removed, and the remaining peptides are searched again to identify additional organisms in the sample, such as contaminants or other species present in a community.
+NovoTax scores each accession by summing peptide-alignment bitscores and subtracting the corresponding sum for reversed decoy peptides. Negative adjusted scores are set to zero. The best-supported proteome is selected at each step. After proteome assignment, matched peptides are removed, and the remaining peptides are searched again to identify additional organisms in the sample, such as contaminants or other species present in a community.
 
 ## What NovoTax is useful for
 
 NovoTax is especially useful when you want to:
 
-- identify the likely strain in an isolate sample
+- identify the best matching proteome for a given sample
 - check whether a sample may be mislabeled
-- detect contamination
+- detect additional species
 - generate a more appropriate FASTA for downstream proteomics analysis
 - identify the dominant members of a microbial community
 
@@ -67,8 +67,8 @@ NovoTax can start from:
 The main outputs are:
 
 - a list of retained peptide sequences remaining after the configured contaminant and host filtering
-- a provenance table for every peptide observation entering the taxonomic search, including assignment status and, for assigned observations, the best supporting MMseqs2 hit within the selected strain
-- the closest matching strains in GTDB
+- a provenance table for every peptide observation entering the taxonomic search, including assignment status and, for assigned observations, the best supporting MMseqs2 hit within the selected proteome
+- the best matching proteomes in GTDB
 - a protein sequence database suitable for downstream proteomics analysis
 
 **To run NovoTax, please first refer to [installation instructions](installation.md).**
