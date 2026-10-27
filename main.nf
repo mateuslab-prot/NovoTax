@@ -53,109 +53,38 @@ def requireExistingDirectory(pathValue, label, requireNonEmpty = false) {
 }
 
 
-def createDbsPath = absolutePathOrNull(params.create_dbs)
-def inputPath = absolutePathOrNull(coalesce(params.input, params.samplesheet))
-def outputDirPath = absolutePathOrNull(coalesce(params.output_dir, params.outdir) ?: './results')
-def xuanjiModelPath = absolutePathOrNull(coalesce(params.xuanjinovo_model_file, params.model_file))
-def cascadiaModelPath = absolutePathOrNull(params.cascadia_model_file)
-def gtdbDbDirPath = absolutePathOrNull(coalesce(params.gtdb_db_dir, params.novotax_db_path))
-def gtdbProteinRepsPath = absolutePathOrNull(coalesce(params.gtdb_protein_reps, params.gtdb_protein_dir))
-def filterHostPath = absolutePathOrNull(coalesce(params.filter_host, params.novotax_filter_host))
-def knownProteomesPath = absolutePathOrNull(params.known_proteomes)
-def filterContaminants = coalesce(params.filter_contaminants, params.novotax_filter_contaminants)
-def ncbiApiKey = coalesce(params.ncbi_api_key, params.novotax_ncbi_api_key)
-def denovoScore = requireProbability(coalesce(params.denovo_score, 0.8), '--denovo_score')
-def genusScore = coalesce(params.genus_score, params.novotax_genus_score) ?: 1275
-def maxIterations = coalesce(params.max_iterations, params.novotax_max_iterations) ?: 20
-def maxStrains = coalesce(params.max_strains, params.novotax_max_strains) ?: 1000
-def cacheDirPath = absolutePathOrNull(params.cache_dir ?: '.novotax_cache')
-
-def runningCreateDbs = createDbsPath != null
-
-new File(outputDirPath).mkdirs()
-new File(cacheDirPath).mkdirs()
-
-if (runningCreateDbs) {
-    if (gtdbProteinRepsPath == null) {
-        error "When running create-dbs, you must provide --gtdb_protein_reps"
-    }
-
-    def createDbsTarget = new File(createDbsPath)
-    if (createDbsTarget.exists() && !createDbsTarget.isDirectory()) {
-        error "--create_dbs must point to a directory path, not a file: ${createDbsPath}"
-    }
-
-    requireExistingDirectory(gtdbProteinRepsPath, 'GTDB representative protein directory', true)
-} else {
-    if (inputPath == null) {
-        error "When running the full workflow, you must provide --input"
-    }
-    requireExistingFile(inputPath, 'Input sample sheet')
-
-    if (xuanjiModelPath != null) {
-        requireExistingFile(xuanjiModelPath, 'XuanjiNovo model file')
-    }
-    if (cascadiaModelPath != null) {
-        requireExistingFile(cascadiaModelPath, 'Cascadia model file')
-    }
-
-    if (gtdbDbDirPath == null) {
-        error "When running classification, you must provide --gtdb_db_dir"
-    }
-    if (gtdbProteinRepsPath == null) {
-        error "When running classification, you must provide --gtdb_protein_reps"
-    }
-
-    requireExistingDirectory(gtdbDbDirPath, 'GTDB database directory', true)
-    requireExistingDirectory(gtdbProteinRepsPath, 'GTDB representative protein directory', true)
-
-    if (filterHostPath != null) {
-        def hostCandidate = file(filterHostPath)
-        if (!hostCandidate.exists()) {
-            error "Host filter path not found: ${filterHostPath}"
-        }
-    }
-    if (knownProteomesPath != null && !file(knownProteomesPath).exists()) {
-        error "Known proteome path not found: ${knownProteomesPath}"
-    }
+def createDbsPath() {
+    absolutePathOrNull(params.create_dbs)
 }
 
-if (!runningCreateDbs) {
-    Channel
-        .fromPath(inputPath, checkIfExists: true)
-        .splitCsv(header: true, sep: '\t')
-        .map { row ->
-            def filePath = row.file_path?.toString()?.trim()
-            def dataFormat = row.data_format?.toString()?.trim()?.toLowerCase()
-
-            if (!filePath || !dataFormat) {
-                error "Each row in the input TSV must contain file_path and data_format"
-            }
-            if (!(dataFormat in ['dda', 'dia', 'peptides'])) {
-                error "Unsupported data_format '${dataFormat}' for file '${filePath}'. Supported values: dda, dia, peptides"
-            }
-
-            def inputFile = file(filePath)
-            if (!inputFile.exists()) {
-                error "Input file not found: ${filePath}"
-            }
-
-            def sampleName = inputFile.getName().replaceAll(/\..+$/, '')
-            if (!(sampleName ==~ /[A-Za-z0-9][A-Za-z0-9._-]*/)) {
-                error "Unsafe sample name '${sampleName}' derived from file '${filePath}'"
-            }
-            tuple(sampleName, inputFile, dataFormat)
-        }
-        .collect(flat: false)
-        .flatMap { samples ->
-            def duplicates = samples.groupBy { it[0] }.findAll { k, v -> v.size() > 1 }.keySet()
-            if (duplicates) {
-                error "Duplicate sample names derived from input files: ${duplicates.join(', ')}"
-            }
-            samples
-        }
-        .set { samples_ch }
+def outputDirPath() {
+    absolutePathOrNull(coalesce(params.output_dir, params.outdir) ?: './results')
 }
+
+def filterContaminants() {
+    coalesce(params.filter_contaminants, params.novotax_filter_contaminants)
+}
+
+def ncbiApiKey() {
+    coalesce(params.ncbi_api_key, params.novotax_ncbi_api_key)
+}
+
+def denovoScore() {
+    requireProbability(coalesce(params.denovo_score, 0.8), '--denovo_score')
+}
+
+def genusScore() {
+    coalesce(params.genus_score, params.novotax_genus_score) ?: 1275
+}
+
+def maxIterations() {
+    coalesce(params.max_iterations, params.novotax_max_iterations) ?: 20
+}
+
+def maxStrains() {
+    coalesce(params.max_strains, params.novotax_max_strains) ?: 1000
+}
+
 
 process RUN_XUANJINOVO_WITH_MODEL {
     tag { sample_name }
@@ -293,7 +222,7 @@ process RUN_CASCADIA_DEFAULT_MODEL {
 process RUN_NOVOTAX {
     tag { sample_name }
 
-    publishDir { outputDirPath }, mode: 'copy'
+    publishDir { outputDirPath() }, mode: 'copy'
 
     input:
     tuple val(sample_name), path(denovo_file)
@@ -308,10 +237,10 @@ process RUN_NOVOTAX {
     tuple val(sample_name), path("${sample_name}")
 
     script:
-    def filterContArg = filterContaminants ? '--filter_contaminants true' : '--filter_contaminants false'
+    def filterContArg = filterContaminants() ? '--filter_contaminants true' : '--filter_contaminants false'
     def filterHostArg = use_host_filter ? "--filter_host \"${host_filter_path}\"" : ''
     def knownProteomesArg = use_known_proteomes ? "--known_proteomes \"${known_proteomes_path}\"" : ''
-    def ncbiApiArg = ncbiApiKey ? "--ncbi_api_key \"${ncbiApiKey}\"" : ''
+    def ncbiApiArg = ncbiApiKey() ? "--ncbi_api_key \"${ncbiApiKey()}\"" : ''
 
     """
     set -euo pipefail
@@ -325,17 +254,17 @@ process RUN_NOVOTAX {
       ${filterHostArg} \
       ${knownProteomesArg} \
       ${ncbiApiArg} \
-      --denovo_score ${denovoScore} \
-      --genus_score ${genusScore} \
-      --max_iterations ${maxIterations} \
-      --max_strains ${maxStrains}
+      --denovo_score ${denovoScore()} \
+      --genus_score ${genusScore()} \
+      --max_iterations ${maxIterations()} \
+      --max_strains ${maxStrains()}
     """
 }
 
 process CREATE_NOVOTAX_DBS {
     tag 'create_dbs'
 
-    publishDir { createDbsPath }, mode: 'copy'
+    publishDir { createDbsPath() }, mode: 'copy'
 
     input:
     val gtdb_release
@@ -356,6 +285,103 @@ process CREATE_NOVOTAX_DBS {
 }
 
 workflow {
+    def inputPath = absolutePathOrNull(coalesce(params.input, params.samplesheet))
+    def xuanjiModelPath = absolutePathOrNull(coalesce(params.xuanjinovo_model_file, params.model_file))
+    def cascadiaModelPath = absolutePathOrNull(params.cascadia_model_file)
+    def gtdbDbDirPath = absolutePathOrNull(coalesce(params.gtdb_db_dir, params.novotax_db_path))
+    def gtdbProteinRepsPath = absolutePathOrNull(coalesce(params.gtdb_protein_reps, params.gtdb_protein_dir))
+    def filterHostPath = absolutePathOrNull(coalesce(params.filter_host, params.novotax_filter_host))
+    def knownProteomesPath = absolutePathOrNull(params.known_proteomes)
+    denovoScore()
+    def cacheDirPath = absolutePathOrNull(params.cache_dir ?: '.novotax_cache')
+
+    def runningCreateDbs = createDbsPath() != null
+
+    new File(outputDirPath()).mkdirs()
+    new File(cacheDirPath).mkdirs()
+
+    if (runningCreateDbs) {
+        if (gtdbProteinRepsPath == null) {
+            error "When running create-dbs, you must provide --gtdb_protein_reps"
+        }
+
+        def createDbsTarget = new File(createDbsPath())
+        if (createDbsTarget.exists() && !createDbsTarget.isDirectory()) {
+            error "--create_dbs must point to a directory path, not a file: ${createDbsPath()}"
+        }
+
+        requireExistingDirectory(gtdbProteinRepsPath, 'GTDB representative protein directory', true)
+    } else {
+        if (inputPath == null) {
+            error "When running the full workflow, you must provide --input"
+        }
+        requireExistingFile(inputPath, 'Input sample sheet')
+
+        if (xuanjiModelPath != null) {
+            requireExistingFile(xuanjiModelPath, 'XuanjiNovo model file')
+        }
+        if (cascadiaModelPath != null) {
+            requireExistingFile(cascadiaModelPath, 'Cascadia model file')
+        }
+
+        if (gtdbDbDirPath == null) {
+            error "When running classification, you must provide --gtdb_db_dir"
+        }
+        if (gtdbProteinRepsPath == null) {
+            error "When running classification, you must provide --gtdb_protein_reps"
+        }
+
+        requireExistingDirectory(gtdbDbDirPath, 'GTDB database directory', true)
+        requireExistingDirectory(gtdbProteinRepsPath, 'GTDB representative protein directory', true)
+
+        if (filterHostPath != null) {
+            def hostCandidate = file(filterHostPath)
+            if (!hostCandidate.exists()) {
+                error "Host filter path not found: ${filterHostPath}"
+            }
+        }
+        if (knownProteomesPath != null && !file(knownProteomesPath).exists()) {
+            error "Known proteome path not found: ${knownProteomesPath}"
+        }
+    }
+
+    if (!runningCreateDbs) {
+        Channel
+            .fromPath(inputPath, checkIfExists: true)
+            .splitCsv(header: true, sep: '\t')
+            .map { row ->
+                def filePath = row.file_path?.toString()?.trim()
+                def dataFormat = row.data_format?.toString()?.trim()?.toLowerCase()
+
+                if (!filePath || !dataFormat) {
+                    error "Each row in the input TSV must contain file_path and data_format"
+                }
+                if (!(dataFormat in ['dda', 'dia', 'peptides'])) {
+                    error "Unsupported data_format '${dataFormat}' for file '${filePath}'. Supported values: dda, dia, peptides"
+                }
+
+                def inputFile = file(filePath)
+                if (!inputFile.exists()) {
+                    error "Input file not found: ${filePath}"
+                }
+
+                def sampleName = inputFile.getName().replaceAll(/\..+$/, '')
+                if (!(sampleName ==~ /[A-Za-z0-9][A-Za-z0-9._-]*/)) {
+                    error "Unsafe sample name '${sampleName}' derived from file '${filePath}'"
+                }
+                tuple(sampleName, inputFile, dataFormat)
+            }
+            .collect(flat: false)
+            .flatMap { samples ->
+                def duplicates = samples.groupBy { it[0] }.findAll { k, v -> v.size() > 1 }.keySet()
+                if (duplicates) {
+                    error "Duplicate sample names derived from input files: ${duplicates.join(', ')}"
+                }
+                samples
+            }
+            .set { samples_ch }
+    }
+
     if (runningCreateDbs) {
         CREATE_NOVOTAX_DBS(
             Channel.value(params.gtdb_release ?: 232),

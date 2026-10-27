@@ -8,7 +8,7 @@ NovoTax utilises several tools during the pipeline, mainly for the de novo pepti
 
 | Component | Version or container image |
 |---|---|
-| NovoTax | `densve/novotax:v1.1.6` |
+| NovoTax | Release 1.0.0 |
 | XuanjiNovo | `densve/xuanjinovo-novotax:cuda11_v1.1.4` |
 | Cascadia | `densve/cascadia-novotax:cuda11_v1.1` |
 | MMseqs2 | 18.8cc5c |
