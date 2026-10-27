@@ -75,12 +75,14 @@ nextflow run main.nf \
 
 ## Output
 
+Optionally add `--known_proteomes /path/to/proteins.fasta` (or a directory of protein FASTAs). NovoTax filters matching peptides after cRAP/host filtering and includes all supplied proteins in the final FASTA alongside its selected GTDB proteomes. `--filter_host` remains filter-only. See [known proteomes](docs/usage.md#known-proteomes) for details.
+
 NovoTax creates one folder per sample:
 ```
 ├── demo_xuanjinovo
 │   ├── demo_xuanjinovo_genus_scores.png    - Graph showing genus scores across search iterations
-│   ├── demo_xuanjinovo_peptides.txt        - Peptides entering the taxonomic search after score and optional cRAP/host filtering
-│   ├── demo_xuanjinovo_strains.fasta       - FASTA containing the concatenated proteomes of all selected strains
+│   ├── demo_xuanjinovo_peptides.txt        - Peptides entering the taxonomic search after all configured filtering
+│   ├── demo_xuanjinovo_strains.fasta       - FASTA containing supplied known proteomes and NovoTax-selected proteomes
 │   ├── peptide_hits.tsv                    - Provenance and assignment status for peptides entering the taxonomic search
 │   └── results.tsv                         - Run settings, timing, search results and summary counts
 ├── demo_cascadia
@@ -92,7 +94,7 @@ NovoTax creates one folder per sample:
 ```
 
 `peptide_hits.tsv` contains one row for every peptide observation remaining after
-the configured cRAP and host filtering. It records the source identifier, original
+the configured cRAP, host, and known-proteome filtering. It records the source identifier, original
 and searched sequence, input score, and whether the peptide was assigned to a
 selected proteome. For assigned rows, the MMseqs target and bit score describe the
 best supporting hit within that proteome; they are provenance fields rather than the
@@ -101,6 +103,8 @@ separate rows. An `unassigned` row was not assigned to a selected proteome, but 
 still have MMseqs matches. `results.tsv` records run settings, timestamps, top
 search hits, iteration summaries, and the total taxonomic input, assigned, and
 unassigned peptide-observation counts.
+
+In the final FASTA, proteins from NovoTax-selected GTDB/NCBI proteomes have identifiers such as `WP_007421320.1-GCF_000829055.1`, linking each protein to its assembly. Supplied known-proteome identifiers receive no assembly suffix. Original sequences and descriptions are retained; duplicate identifiers are disambiguated as described in the usage guide.
 
 
 ## Cite

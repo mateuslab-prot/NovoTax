@@ -42,7 +42,7 @@ NovoTax derives each sample directory from the corresponding input filename. The
 │   └── 20181112_QX8_PhGe_SA_EasyLC12-14_B_a8_221_TP96hrs_control_rep1
 ```
 
-Each sample folder contains `<sample_name>_genus_scores.png`, `<sample_name>_peptides.txt`, `<sample_name>_strains.fasta`, `peptide_hits.tsv`, and `results.tsv`. The peptide list contains the above-threshold observations remaining after the configured cRAP and host filtering. `peptide_hits.tsv` records provenance and final assignment status for those observations.
+Each sample folder contains `<sample_name>_genus_scores.png`, `<sample_name>_peptides.txt`, `<sample_name>_strains.fasta`, `peptide_hits.tsv`, and `results.tsv`. The peptide list contains the above-threshold observations remaining after the configured cRAP, host, and known-proteome filtering. `peptide_hits.tsv` records provenance and final assignment status for those observations.
 
 Newly generated score plots list proteomes in a numbered panel below the graph, matching the iteration numbers on the x-axis. Each entry shows `accession - GTDB species (NCBI species)` and retains `(filtered)` for rejected hits. The panel grows with the number of entries and wraps long labels to keep text separate from the graph. NCBI names come from the same GTDB release's metadata; missing names appear as `(NCBI species unavailable)`.
 

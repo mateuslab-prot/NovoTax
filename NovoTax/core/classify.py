@@ -18,7 +18,7 @@ from typing import Callable, Iterable
 import matplotlib.pyplot as plt
 import numpy as np
 
-from NovoTax.core.gtdb import GTDB, GTDBAssets, discover_gtdb_assets
+from NovoTax.core.gtdb import GTDB, GTDBAssets, discover_gtdb_assets, strip_accession_prefix
 from NovoTax.core.mmseqs import (
     get_best_query_hits_for_accession,
     get_best_query_scores_for_accession,
@@ -26,7 +26,12 @@ from NovoTax.core.mmseqs import (
     get_scores,
 )
 from NovoTax.core.mmseqs_search import mmseqs_easy_search
-from NovoTax.dbs.create_db import build_mmseqs_db, process_fasta_folder_to_single, write_fasta
+from NovoTax.dbs.create_db import (
+    build_mmseqs_db,
+    iter_fasta_records,
+    process_fasta_folder_to_single,
+    write_fasta,
+)
 from NovoTax.dbs.ncbi import NCBIProteomeDownloader
 
 
@@ -627,6 +632,7 @@ def write_concatenated_strains_fasta(
     downloader: NCBIProteomeDownloader,
     paths: RuntimePaths,
     gtdb_protein_reps: Path,
+    known_fasta: Path | None = None,
 ) -> None:
     ensure_parent(paths.strains_fasta_path)
 
@@ -637,18 +643,44 @@ def write_concatenated_strains_fasta(
             seen.add(accession)
             ordered_accessions.append(accession)
 
+    seen_ids: set[str] = set()
     with paths.strains_fasta_path.open("w") as out_handle:
-        for index, accession in enumerate(ordered_accessions):
+        if known_fasta is not None:
+            for header, sequence in iter_fasta_records(known_fasta):
+                header = unique_fasta_header(header, seen_ids)
+                out_handle.write(f">{header}\n{sequence}\n")
+
+        for accession in ordered_accessions:
             fasta_path = ensure_accession_fasta(
                 accession=accession,
                 downloader=downloader,
                 paths=paths,
                 gtdb_protein_reps=gtdb_protein_reps,
             )
-            with fasta_path.open() as in_handle:
-                shutil.copyfileobj(in_handle, out_handle)
-            if index != len(ordered_accessions) - 1:
-                out_handle.write("\n")
+            assembly = strip_accession_prefix(accession)
+            for header, sequence in iter_fasta_records(fasta_path):
+                parts = header.split(maxsplit=1)
+                identifier = parts[0]
+                if not identifier.endswith(f"-{assembly}"):
+                    identifier = f"{identifier}-{assembly}"
+                description = f" {parts[1]}" if len(parts) == 2 else ""
+                header = unique_fasta_header(identifier + description, seen_ids)
+                out_handle.write(f">{header}\n{sequence}\n")
+
+
+def unique_fasta_header(header: str, seen_ids: set[str]) -> str:
+    """Keep every protein, disambiguating only duplicate identifiers."""
+    parts = header.split(maxsplit=1)
+    identifier = parts[0]
+    unique_id = identifier
+    duplicate = 2
+    while unique_id in seen_ids:
+        unique_id = f"{identifier}-duplicate{duplicate}"
+        duplicate += 1
+    seen_ids.add(unique_id)
+    if unique_id == identifier:
+        return header
+    return unique_id + (f" {parts[1]}" if len(parts) == 2 else "")
 
 
 def write_genus_score_plot(
@@ -980,6 +1012,54 @@ def ensure_host_db(host_path: Path, paths: RuntimePaths) -> Path:
     return db_prefix
 
 
+def prepare_known_proteomes(
+    source: Path, paths: RuntimePaths,
+) -> tuple[Path, Path, list[Path]]:
+    """Snapshot original proteins and cache a separate I/L-normalized search DB."""
+    source = source.expanduser().resolve()
+    if source.is_dir():
+        files = sorted(
+            path for path in source.iterdir()
+            if path.is_file() and path.suffix.lower() in {".fa", ".faa", ".fasta"}
+        )
+    elif source.is_file():
+        files = [source]
+    else:
+        raise FileNotFoundError(f"Known proteome path does not exist: {source}")
+    if not files:
+        raise ValueError(f"No protein FASTA files found in {source}")
+
+    original_fasta = paths.work_dir / "known_proteomes.fasta"
+    digest = hashlib.sha256()
+    seen_ids: set[str] = set()
+    with original_fasta.open("w") as output:
+        for path in files:
+            with path.open() as handle:
+                first = next((line.strip() for line in handle if line.strip()), "")
+            if not first.startswith(">"):
+                raise ValueError(f"Empty or invalid protein FASTA: {path}")
+            for header, sequence in iter_fasta_records(path):
+                if not header.strip() or not re.fullmatch(r"[A-Za-z*]+", sequence):
+                    raise ValueError(f"Invalid protein FASTA record in {path}: {header!r}")
+                header = unique_fasta_header(header, seen_ids)
+                record = f">{header}\n{sequence}\n"
+                output.write(record)
+                digest.update(record.encode("utf-8"))
+
+    stem = f"known_proteomes_v1_{digest.hexdigest()}"
+    cached_original = paths.fasta_cache_dir / f"{stem}_original.fasta"
+    # The persistent cache can be mounted on a different filesystem from /tmp.
+    shutil.copyfile(original_fasta, cached_original)
+    search_fasta = paths.fasta_cache_dir / f"{stem}.fasta"
+    db_prefix = paths.db_cache_dir / stem
+    if not mmseqs_db_exists(db_prefix):
+        with search_fasta.open("w") as output:
+            for header, sequence in iter_fasta_records(cached_original):
+                output.write(f">{header}\n{sequence.upper().replace('I', 'L')}\n")
+        build_mmseqs_db(str(search_fasta), str(db_prefix))
+    return db_prefix, cached_original, files
+
+
 def pop_best_hit_peptides(
     peptides: dict[str, str],
     result_file: Path,
@@ -1016,6 +1096,7 @@ def main(
     gtdb_protein_reps: Path,
     filter_contaminants: bool = True,
     filter_host: Path | None = None,
+    known_proteomes: Path | None = None,
     ncbi_api_key: str | None = None,
     denovo_score: float = DEFAULT_SCORE_THRESHOLD,
     genus_score: float = 1275.0,
@@ -1064,6 +1145,12 @@ def main(
         if filter_host is not None:
             host_db = ensure_host_db(filter_host.resolve(), paths)
 
+        known_db: Path | None = None
+        known_fasta: Path | None = None
+        known_files: list[Path] = []
+        if known_proteomes is not None:
+            known_db, known_fasta, known_files = prepare_known_proteomes(known_proteomes, paths)
+
         found_strain_accessions: list[str] = []
         genus_score_points: list[tuple[str, float, bool]] = []
         peptide_assignments: dict[str, PeptideAssignment] = {}
@@ -1085,6 +1172,8 @@ def main(
             out_handle.write(f"gtdb_protein_reps\t{resources.gtdb_protein_reps}\n")
             out_handle.write(f"filter_contaminants\t{filter_contaminants}\n")
             out_handle.write(f"filter_host\t{filter_host if filter_host is not None else 'NONE'}\n")
+            for known_file in known_files:
+                out_handle.write(f"known_proteome_file\t{known_file}\n")
             out_handle.write(f"denovo_score_threshold\t{denovo_score}\n")
             out_handle.write(f"genus_score_threshold\t{genus_score}\n")
             out_handle.write(f"max_iterations\t{max_iterations}\n")
@@ -1118,6 +1207,20 @@ def main(
                     target_db=host_db,
                 )
                 write_timestamp(out_handle, "host_search_finished")
+
+            if known_db is not None:
+                write_timestamp(out_handle, "known_proteomes_search_started")
+                removed = filter_against_db(
+                    peptides=peptides,
+                    sample_name=sample_name,
+                    peptide_fasta_dir=paths.peptide_fasta_dir,
+                    mmseqs_results_dir=paths.mmseqs_results_dir,
+                    tmp_mmseqs_dir=paths.tmp_mmseqs_dir,
+                    label="known_proteomes",
+                    target_db=known_db,
+                )
+                out_handle.write(f"known_proteomes_removed_peptides\t{removed}\n")
+                write_timestamp(out_handle, "known_proteomes_search_finished")
 
             taxonomy_query_ids = tuple(peptides)
             write_peptide_list(peptides, paths.peptides_path)
@@ -1342,6 +1445,7 @@ def main(
             downloader=downloader,
             paths=paths,
             gtdb_protein_reps=resources.gtdb_protein_reps,
+            known_fasta=known_fasta,
         )
         write_genus_score_plot(genus_score_points, genus_score, paths.genus_plot_path, gtdb)
         with paths.result_path.open("a") as out_handle:

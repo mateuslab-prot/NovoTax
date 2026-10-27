@@ -61,6 +61,7 @@ def cascadiaModelPath = absolutePathOrNull(params.cascadia_model_file)
 def gtdbDbDirPath = absolutePathOrNull(coalesce(params.gtdb_db_dir, params.novotax_db_path))
 def gtdbProteinRepsPath = absolutePathOrNull(coalesce(params.gtdb_protein_reps, params.gtdb_protein_dir))
 def filterHostPath = absolutePathOrNull(coalesce(params.filter_host, params.novotax_filter_host))
+def knownProteomesPath = absolutePathOrNull(params.known_proteomes)
 def filterContaminants = coalesce(params.filter_contaminants, params.novotax_filter_contaminants)
 def ncbiApiKey = coalesce(params.ncbi_api_key, params.novotax_ncbi_api_key)
 def denovoScore = requireProbability(coalesce(params.denovo_score, 0.8), '--denovo_score')
@@ -113,6 +114,9 @@ if (runningCreateDbs) {
         if (!hostCandidate.exists()) {
             error "Host filter path not found: ${filterHostPath}"
         }
+    }
+    if (knownProteomesPath != null && !file(knownProteomesPath).exists()) {
+        error "Known proteome path not found: ${knownProteomesPath}"
     }
 }
 
@@ -297,6 +301,8 @@ process RUN_NOVOTAX {
     path gtdb_protein_reps
     path host_filter_path
     val use_host_filter
+    path known_proteomes_path
+    val use_known_proteomes
 
     output:
     tuple val(sample_name), path("${sample_name}")
@@ -304,6 +310,7 @@ process RUN_NOVOTAX {
     script:
     def filterContArg = filterContaminants ? '--filter_contaminants true' : '--filter_contaminants false'
     def filterHostArg = use_host_filter ? "--filter_host \"${host_filter_path}\"" : ''
+    def knownProteomesArg = use_known_proteomes ? "--known_proteomes \"${known_proteomes_path}\"" : ''
     def ncbiApiArg = ncbiApiKey ? "--ncbi_api_key \"${ncbiApiKey}\"" : ''
 
     """
@@ -316,6 +323,7 @@ process RUN_NOVOTAX {
       --gtdb-protein-reps "${gtdb_protein_reps}" \
       ${filterContArg} \
       ${filterHostArg} \
+      ${knownProteomesArg} \
       ${ncbiApiArg} \
       --denovo_score ${denovoScore} \
       --genus_score ${genusScore} \
@@ -383,13 +391,21 @@ workflow {
                 : file("${projectDir}/assets/no_host_filter.txt")
         )
         def use_host_filter_ch = Channel.value(filterHostPath != null)
+        def known_proteomes_ch = Channel.value(
+            knownProteomesPath != null
+                ? file(knownProteomesPath)
+                : file("${projectDir}/assets/no_known_proteomes.txt")
+        )
+        def use_known_proteomes_ch = Channel.value(knownProteomesPath != null)
 
         RUN_NOVOTAX(
             all_results,
             gtdb_db_dir_ch,
             gtdb_protein_reps_ch,
             host_filter_file_ch,
-            use_host_filter_ch
+            use_host_filter_ch,
+            known_proteomes_ch,
+            use_known_proteomes_ch
         )
     }
 }

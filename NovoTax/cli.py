@@ -168,6 +168,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Path to host FASTA file or directory of FASTA files to build and filter against",
     )
     classify_parser.add_argument(
+        "--known_proteomes",
+        type=existing_path,
+        default=None,
+        help="Protein FASTA file or directory to filter against and include in the final FASTA",
+    )
+    classify_parser.add_argument(
         "--ncbi_api_key",
         default=None,
         help="NCBI API key for proteome downloading (default: none)",
@@ -238,6 +244,7 @@ def run_classify(
     max_iterations: int,
     max_strains: int,
     sample_name: str | None = None,
+    known_proteomes: Path | None = None,
 ) -> None:
     from NovoTax.core.classify import main as classify_main
 
@@ -259,6 +266,7 @@ def run_classify(
         gtdb_protein_reps=gtdb_protein_reps,
         filter_contaminants=filter_contaminants,
         filter_host=filter_host,
+        known_proteomes=known_proteomes,
         ncbi_api_key=ncbi_api_key,
         denovo_score=denovo_score,
         genus_score=genus_score,
@@ -288,6 +296,7 @@ def main() -> None:
             gtdb_protein_reps=args.gtdb_protein_reps,
             filter_contaminants=args.filter_contaminants,
             filter_host=args.filter_host,
+            known_proteomes=args.known_proteomes,
             ncbi_api_key=args.ncbi_api_key,
             denovo_score=args.denovo_score,
             genus_score=args.genus_score,

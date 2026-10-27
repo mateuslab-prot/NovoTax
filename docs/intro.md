@@ -66,9 +66,11 @@ NovoTax can start from:
 
 The main outputs are:
 
-- a list of retained peptide sequences remaining after the configured contaminant and host filtering
+- a list of retained peptide sequences remaining after the configured cRAP, host, and known-proteome filtering
 - a provenance table for every peptide observation entering the taxonomic search, including assignment status and, for assigned observations, the best supporting MMseqs2 hit within the selected proteome
 - the best matching proteomes in GTDB
 - a protein sequence database suitable for downstream proteomics analysis
+
+Users can supply a protein FASTA or directory with `--known_proteomes`. All supplied proteins are included in the final database, and their matching peptides are filtered before searching for additional GTDB proteomes. See [known proteomes](usage.md#known-proteomes).
 
 **To run NovoTax, please first refer to [installation instructions](installation.md).**
