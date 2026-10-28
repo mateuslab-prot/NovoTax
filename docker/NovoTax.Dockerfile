@@ -10,6 +10,11 @@ RUN micromamba install -y -n base -f /tmp/env.yaml \
 
 USER root
 
+# Nextflow uses ps to collect task resource metrics.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends procps \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN ln -sf ${MAMBA_ROOT_PREFIX}/bin/python /usr/local/bin/python \
     && ln -sf ${MAMBA_ROOT_PREFIX}/bin/python /usr/local/bin/python3 \
     && ln -sf ${MAMBA_ROOT_PREFIX}/bin/pip /usr/local/bin/pip \
