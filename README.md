@@ -107,6 +107,18 @@ unassigned peptide-observation counts.
 In the final FASTA, proteins from NovoTax-selected GTDB/NCBI proteomes have identifiers such as `WP_007421320.1-GCF_000829055.1`, linking each protein to its assembly. Supplied known-proteome identifiers receive no assembly suffix. Original sequences and descriptions are retained; duplicate identifiers are disambiguated as described in the usage guide.
 
 
+## Changelog
+
+### New in v1.2.0
+
+- Added `--known_proteomes` to filter matching peptides and include supplied proteins in the final FASTA.
+- Added assembly accessions to FASTA identifiers for selected GTDB/NCBI proteomes and disambiguated duplicate identifiers.
+- Improved genus-score plot labels with GTDB and NCBI species names in a separate panel. New databases retain NCBI taxonomy; older databases remain usable.
+- Fixed compatibility with Nextflow's strict syntax parser while preserving existing parameters and defaults.
+- Added `procps` to the NovoTax image for Nextflow task resource monitoring.
+- Moved GPU-task cache defaults into task directories and added a writable Matplotlib configuration directory for classification, preserving explicit overrides for the new settings.
+- Added manuscript sample sheets for PXD010000, PXD017035, and PXD036445, and updated usage documentation.
+
 ## Cite
 
 If you use **NovoTax**, please cite the tools that make this possible:
