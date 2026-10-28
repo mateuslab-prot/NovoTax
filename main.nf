@@ -111,7 +111,10 @@ process RUN_XUANJINOVO_WITH_MODEL {
     mkdir -p "${sample_name}"
 
     export NUMBA_CACHE_DIR="\$WORKDIR/.numba_cache"
-    mkdir -p "\$NUMBA_CACHE_DIR"
+    export CUPY_CACHE_DIR="\${CUPY_CACHE_DIR:-\$WORKDIR/.cupy_cache}"
+    export MPLCONFIGDIR="\${MPLCONFIGDIR:-\$WORKDIR/.mplconfig}"
+    export XDG_CACHE_HOME="\${XDG_CACHE_HOME:-\$WORKDIR/.cache}"
+    mkdir -p "\$NUMBA_CACHE_DIR" "\$CUPY_CACHE_DIR" "\$MPLCONFIGDIR" "\$XDG_CACHE_HOME"
 
     python -m XuanjiNovo.XuanjiNovo \
       --mode=${params.mode} \
@@ -147,7 +150,10 @@ process RUN_XUANJINOVO_DEFAULT_MODEL {
     mkdir -p "${sample_name}"
 
     export NUMBA_CACHE_DIR="\$WORKDIR/.numba_cache"
-    mkdir -p "\$NUMBA_CACHE_DIR"
+    export CUPY_CACHE_DIR="\${CUPY_CACHE_DIR:-\$WORKDIR/.cupy_cache}"
+    export MPLCONFIGDIR="\${MPLCONFIGDIR:-\$WORKDIR/.mplconfig}"
+    export XDG_CACHE_HOME="\${XDG_CACHE_HOME:-\$WORKDIR/.cache}"
+    mkdir -p "\$NUMBA_CACHE_DIR" "\$CUPY_CACHE_DIR" "\$MPLCONFIGDIR" "\$XDG_CACHE_HOME"
 
     python -m XuanjiNovo.XuanjiNovo \
       --mode=${params.mode} \
@@ -181,7 +187,10 @@ process RUN_CASCADIA_WITH_MODEL {
 
     WORKDIR="\$(pwd)"
     export NUMBA_CACHE_DIR="\$WORKDIR/.numba_cache"
-    mkdir -p "\$NUMBA_CACHE_DIR"
+    export CUPY_CACHE_DIR="\${CUPY_CACHE_DIR:-\$WORKDIR/.cupy_cache}"
+    export MPLCONFIGDIR="\${MPLCONFIGDIR:-\$WORKDIR/.mplconfig}"
+    export XDG_CACHE_HOME="\${XDG_CACHE_HOME:-\$WORKDIR/.cache}"
+    mkdir -p "\$NUMBA_CACHE_DIR" "\$CUPY_CACHE_DIR" "\$MPLCONFIGDIR" "\$XDG_CACHE_HOME"
 
     cascadia sequence "${input_file}" "${cascadia_model_file}" \
       --score_threshold 0 \
@@ -210,7 +219,10 @@ process RUN_CASCADIA_DEFAULT_MODEL {
 
     WORKDIR="\$(pwd)"
     export NUMBA_CACHE_DIR="\$WORKDIR/.numba_cache"
-    mkdir -p "\$NUMBA_CACHE_DIR"
+    export CUPY_CACHE_DIR="\${CUPY_CACHE_DIR:-\$WORKDIR/.cupy_cache}"
+    export MPLCONFIGDIR="\${MPLCONFIGDIR:-\$WORKDIR/.mplconfig}"
+    export XDG_CACHE_HOME="\${XDG_CACHE_HOME:-\$WORKDIR/.cache}"
+    mkdir -p "\$NUMBA_CACHE_DIR" "\$CUPY_CACHE_DIR" "\$MPLCONFIGDIR" "\$XDG_CACHE_HOME"
 
     cascadia sequence "${input_file}" "/opt/models/cascadia.ckpt" \
       --score_threshold 0 \
@@ -244,6 +256,9 @@ process RUN_NOVOTAX {
 
     """
     set -euo pipefail
+
+    export MPLCONFIGDIR="\${MPLCONFIGDIR:-\$PWD/.mplconfig}"
+    mkdir -p "\$MPLCONFIGDIR"
 
     python -u -m NovoTax.cli classify "${denovo_file}" \
       --output_dir . \
